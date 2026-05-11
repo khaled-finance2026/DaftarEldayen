@@ -444,15 +444,30 @@ let prevScreen = 's-home';
 // تهيئة
 // ================================================================
 async function init() {
-  const saved = localStorage.getItem('session');
+  // يقرأ الجلسة المحفوظة — تعمل بدون إنترنت
+  const saved = localStorage.getItem('dd_session') || localStorage.getItem('session');
   if (saved) {
-    SESSION = JSON.parse(saved);
-    CUR = SESSION.currency || '₪';
-    showScreen('s-home');
-    await loadHomeData();
-    monitorConnection();
-    // مزامنة تلقائية عند الفتح إذا يوجد نت
-    if (navigator.onLine) setTimeout(doSync, 1500);
+    try {
+      SESSION = JSON.parse(saved);
+      CUR = SESSION.currency || '₪';
+      // تحقق من صلاحية الجلسة (30 يوم)
+      const savedAt = SESSION.saved_at || Date.now();
+      const days30  = 30 * 24 * 3600 * 1000;
+      if (Date.now() - savedAt > days30 && !navigator.onLine) {
+        // جلسة منتهية وبدون نت — اعرض رسالة واضحة
+        showScreen('s-login');
+        showErr(document.getElementById('login-err'),
+          'انتهت الجلسة — اتصل بالإنترنت مرة واحدة لتجديدها');
+        return;
+      }
+      showScreen('s-home');
+      await loadHomeData();
+      monitorConnection();
+      if (navigator.onLine) setTimeout(doSync, 1500);
+    } catch(e) {
+      localStorage.removeItem('dd_session');
+      localStorage.removeItem('session');
+    }
   }
 }
 
@@ -487,10 +502,13 @@ async function doLogin() {
         token:       d.token,
         name:        d.name,
         shop_name:   d.shop_name,
-        currency:    d.currency || '₪'
+        currency:    d.currency || '₪',
+        saved_at:    Date.now()
       };
       CUR = SESSION.currency;
-      localStorage.setItem('session', JSON.stringify(SESSION));
+      // حفظ الجلسة لمدة 30 يوماً
+      localStorage.setItem('dd_session', JSON.stringify(SESSION));
+      localStorage.setItem('session',    JSON.stringify(SESSION));
 
       // جلب البيانات الأولية
       await pullFromServer();
