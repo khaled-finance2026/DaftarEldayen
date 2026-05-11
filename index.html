@@ -1,0 +1,1090 @@
+<!DOCTYPE html>
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
+<meta name="theme-color" content="#0f172a">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>دفتر الدين</title>
+
+<!-- Dexie.js للتخزين المحلي -->
+<script src="https://unpkg.com/dexie@3/dist/dexie.js"></script>
+
+<style>
+:root{
+  --bg:#0f172a;--bg2:#1e293b;--bg3:#334155;
+  --txt:#f1f5f9;--txt2:#94a3b8;--txt3:#64748b;
+  --pri:#3b82f6;--grn:#10b981;--red:#ef4444;--yel:#fbbf24;
+  --brd:rgba(255,255,255,.08);
+  --nav:56px;--bot:64px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
+  font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif}
+
+/* ===== SCREENS ===== */
+.screen{display:none;flex-direction:column;
+  height:100vh;overflow:hidden;position:absolute;inset:0}
+.screen.active{display:flex}
+
+/* ===== LOGIN ===== */
+#s-login{align-items:center;justify-content:center;padding:24px;
+  background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(59,130,246,.2),transparent)}
+.login-card{background:var(--bg2);border:1px solid var(--brd);
+  border-radius:20px;padding:32px 28px;width:100%;max-width:380px}
+.login-logo{text-align:center;margin-bottom:24px}
+.login-logo .icon{font-size:3em;margin-bottom:8px}
+.login-logo h1{font-size:1.6em;font-weight:900;color:var(--pri)}
+.login-logo p{font-size:13px;color:var(--txt3);margin-top:4px}
+.fg{margin-bottom:14px}
+.fg label{display:block;font-size:13px;font-weight:600;color:var(--txt2);margin-bottom:6px}
+.fi{width:100%;padding:13px 14px;border-radius:10px;
+  border:2px solid var(--brd);background:rgba(255,255,255,.06);
+  color:var(--txt);font-size:16px;outline:none;transition:border-color .2s}
+.fi:focus{border-color:var(--pri)}
+.fi::placeholder{color:var(--txt3)}
+.fi-phone{direction:ltr;letter-spacing:.5px}
+.fi-pin{text-align:center;letter-spacing:10px;font-size:22px;font-weight:900}
+.btn{width:100%;padding:13px;border:none;border-radius:10px;
+  font-size:16px;font-weight:700;cursor:pointer;color:#fff;transition:opacity .2s}
+.btn:active{opacity:.8}
+.btn-pri{background:linear-gradient(135deg,#1d4ed8,#3b82f6)}
+.btn-grn{background:linear-gradient(135deg,#065f46,#10b981)}
+.btn-red{background:linear-gradient(135deg,#b91c1c,#ef4444)}
+.btn-gray{background:var(--bg3);color:var(--txt2)}
+.btn-sm{padding:8px 14px;border:none;border-radius:8px;
+  font-size:13px;font-weight:700;cursor:pointer;color:#fff}
+.err{background:rgba(239,68,68,.15);border:1px solid rgba(239,68,68,.3);
+  border-radius:8px;padding:9px 12px;font-size:13px;color:#fca5a5;
+  margin-bottom:12px;display:none}
+
+/* ===== SYNC BAR ===== */
+.sync-bar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:6px 16px;font-size:12px;font-weight:600;
+  border-bottom:1px solid var(--brd);min-height:32px;
+}
+.sync-online{background:rgba(16,185,129,.1);color:var(--grn)}
+.sync-offline{background:rgba(239,68,68,.1);color:var(--red)}
+.sync-pending{background:rgba(251,191,36,.1);color:var(--yel)}
+.sync-dot{width:7px;height:7px;border-radius:50%;display:inline-block;margin-left:6px}
+.sync-btn{padding:3px 10px;border:none;border-radius:6px;
+  background:rgba(255,255,255,.1);color:var(--txt);font-size:11px;cursor:pointer}
+
+/* ===== TOP NAV ===== */
+.topnav{display:flex;align-items:center;justify-content:space-between;
+  padding:0 16px;height:var(--nav);border-bottom:1px solid var(--brd);
+  position:sticky;top:0;z-index:10;background:var(--bg);flex-shrink:0}
+.topnav h2{font-size:1.1em;font-weight:900}
+.icon-btn{width:38px;height:38px;border:none;border-radius:9px;
+  background:var(--bg3);color:var(--txt);font-size:18px;cursor:pointer;
+  display:flex;align-items:center;justify-content:center}
+
+/* ===== SCROLL CONTENT ===== */
+.content{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;
+  padding-bottom:calc(var(--bot) + 16px)}
+.content::-webkit-scrollbar{display:none}
+
+/* ===== BOTTOM NAV ===== */
+.botnav{position:sticky;bottom:0;display:flex;background:var(--bg);
+  border-top:1px solid var(--brd);height:var(--bot);flex-shrink:0}
+.bnt{flex:1;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;border:none;background:transparent;
+  color:var(--txt3);font-size:11px;font-weight:600;cursor:pointer;gap:3px}
+.bnt .ic{font-size:20px}
+.bnt.active{color:var(--pri)}
+
+/* ===== CARDS ===== */
+.stat-row{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:14px 16px}
+.stat-card{background:var(--bg2);border:1px solid var(--brd);
+  border-radius:12px;padding:14px;text-align:center}
+.stat-num{font-size:1.6em;font-weight:900;margin-bottom:3px}
+.stat-lbl{font-size:12px;color:var(--txt2);font-weight:600}
+
+/* ===== LIST ===== */
+.list-item{display:flex;align-items:center;padding:13px 16px;
+  border-bottom:1px solid var(--brd);cursor:pointer;transition:background .15s}
+.list-item:active{background:rgba(255,255,255,.04)}
+.li-avatar{width:40px;height:40px;border-radius:12px;
+  background:linear-gradient(135deg,#1d4ed8,#3b82f6);
+  display:flex;align-items:center;justify-content:center;
+  font-weight:900;font-size:1em;margin-left:12px;flex-shrink:0}
+.li-info{flex:1;min-width:0}
+.li-name{font-size:15px;font-weight:700;white-space:nowrap;
+  overflow:hidden;text-overflow:ellipsis}
+.li-phone{font-size:13px;color:var(--pri);direction:ltr;
+  display:inline-block;margin-top:2px;font-weight:700}
+.li-meta{font-size:12px;color:var(--txt3);margin-top:1px}
+.li-right{text-align:left;flex-shrink:0;margin-right:0;margin-left:0}
+.li-amt{font-size:15px;font-weight:900}
+.li-status{font-size:11px;font-weight:700;padding:2px 7px;
+  border-radius:8px;margin-top:3px;display:inline-block}
+.s-unpaid{background:rgba(239,68,68,.15);color:var(--red)}
+.s-paid{background:rgba(16,185,129,.15);color:var(--grn)}
+.s-partial{background:rgba(251,191,36,.15);color:var(--yel)}
+
+/* ===== MODAL ===== */
+.modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.7);
+  z-index:100;display:none;align-items:flex-end}
+.modal-bg.open{display:flex}
+.modal{background:var(--bg2);border-radius:20px 20px 0 0;
+  padding:20px 16px 32px;width:100%;max-height:90vh;overflow-y:auto}
+.modal h3{font-size:1.1em;font-weight:900;margin-bottom:16px;
+  padding-bottom:12px;border-bottom:1px solid var(--brd)}
+.modal-close{float:left;background:none;border:none;color:var(--txt2);
+  font-size:20px;cursor:pointer;line-height:1}
+
+/* ===== SEARCH ===== */
+.search-bar{padding:10px 16px;border-bottom:1px solid var(--brd)}
+.search-in{width:100%;padding:10px 14px;border-radius:10px;
+  border:1.5px solid var(--brd);background:var(--bg3);
+  color:var(--txt);font-size:15px;outline:none}
+.search-in:focus{border-color:var(--pri)}
+
+/* ===== FAB ===== */
+.fab{position:fixed;bottom:calc(var(--bot) + 16px);left:16px;
+  width:52px;height:52px;border-radius:50%;border:none;
+  background:linear-gradient(135deg,#b91c1c,#ef4444);
+  color:#fff;font-size:26px;cursor:pointer;
+  box-shadow:0 4px 16px rgba(239,68,68,.4);z-index:50}
+
+/* ===== OFFLINE BADGE ===== */
+.offline-badge{
+  position:fixed;top:0;left:0;right:0;z-index:200;
+  background:rgba(239,68,68,.9);color:#fff;
+  text-align:center;padding:8px;font-size:13px;font-weight:700;
+  display:none;
+}
+.offline-badge.show{display:block}
+
+/* ===== TX LIST ===== */
+.tx-item{padding:12px 16px;border-bottom:1px solid var(--brd)}
+.tx-desc{font-size:14px;font-weight:700}
+.tx-meta{font-size:12px;color:var(--txt3);margin-top:3px}
+.tx-amt{font-size:16px;font-weight:900;float:left}
+
+/* ===== EMPTY ===== */
+.empty{text-align:center;padding:48px 20px;color:var(--txt3)}
+.empty .em-icon{font-size:3em;margin-bottom:12px}
+.empty p{font-size:15px}
+
+/* ===== PENDING INDICATOR ===== */
+.pending-dot{width:8px;height:8px;border-radius:50%;
+  background:var(--yel);display:inline-block;margin-right:4px}
+</style>
+</head>
+<body>
+
+<!-- شريط بدون نت -->
+<div class="offline-badge" id="offline-badge">
+  لا يوجد اتصال — العمل محلياً، ستتم المزامنة عند عودة النت
+</div>
+
+<!-- ===== شاشة الدخول ===== -->
+<div class="screen active" id="s-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon">📒</div>
+      <h1>دفتر الدين</h1>
+      <p>نظام التحصيل الذكي</p>
+    </div>
+    <div id="login-err" class="err"></div>
+    <div class="fg">
+      <label>رقم الهاتف</label>
+      <input type="tel" id="inp-phone" class="fi fi-phone"
+        placeholder="+970XXXXXXXXX" dir="ltr"
+        onkeydown="if(event.key==='Enter')document.getElementById('inp-pin').focus()">
+    </div>
+    <div class="fg" style="margin-bottom:18px">
+      <label>الرقم السري</label>
+      <input type="password" id="inp-pin" class="fi fi-pin"
+        placeholder="••••" maxlength="8" inputmode="numeric"
+        onkeydown="if(event.key==='Enter')doLogin()">
+    </div>
+    <button class="btn btn-pri" id="login-btn" onclick="doLogin()">دخول</button>
+  </div>
+</div>
+
+<!-- ===== شاشة الرئيسية ===== -->
+<div class="screen" id="s-home">
+  <div class="sync-bar" id="sync-bar">
+    <span id="sync-txt">جاري...</span>
+    <button class="sync-btn" onclick="doSync()">مزامنة</button>
+  </div>
+  <div class="topnav">
+    <h2 id="shop-name">دفتر الدين</h2>
+    <button class="icon-btn" onclick="showScreen('s-settings')">⚙️</button>
+  </div>
+  <div class="content">
+    <div class="stat-row" id="home-stats"></div>
+    <div style="padding:0 16px 8px;font-size:13px;font-weight:700;color:var(--txt2)">
+      آخر الديون
+    </div>
+    <div id="home-txlist"></div>
+  </div>
+  <div class="botnav">
+    <button class="bnt active" onclick="showTab('home')" id="tab-home">
+      <span class="ic">🏠</span>الرئيسية
+    </button>
+    <button class="bnt" onclick="showTab('customers')" id="tab-customers">
+      <span class="ic">👥</span>العملاء
+    </button>
+    <button class="bnt" onclick="showTab('add')" id="tab-add">
+      <span class="ic">➕</span>إضافة دين
+    </button>
+    <button class="bnt" onclick="showTab('reports')" id="tab-reports">
+      <span class="ic">📊</span>تقارير
+    </button>
+  </div>
+</div>
+
+<!-- ===== شاشة العملاء ===== -->
+<div class="screen" id="s-customers">
+  <div class="topnav">
+    <h2>العملاء</h2>
+    <button class="icon-btn" onclick="openModal('m-addcust')">➕</button>
+  </div>
+  <div class="search-bar">
+    <input type="search" class="search-in" id="cust-search"
+      placeholder="🔍 ابحث عن عميل..." oninput="filterCustomers(this.value)">
+  </div>
+  <div class="content" id="cust-list"></div>
+  <div class="botnav">
+    <button class="bnt" onclick="showTab('home')" id="tab-home2">
+      <span class="ic">🏠</span>الرئيسية
+    </button>
+    <button class="bnt active" onclick="showTab('customers')" id="tab-customers2">
+      <span class="ic">👥</span>العملاء
+    </button>
+    <button class="bnt" onclick="showTab('add')" id="tab-add2">
+      <span class="ic">➕</span>إضافة دين
+    </button>
+    <button class="bnt" onclick="showTab('reports')" id="tab-reports2">
+      <span class="ic">📊</span>تقارير
+    </button>
+  </div>
+</div>
+
+<!-- ===== شاشة إضافة دين ===== -->
+<div class="screen" id="s-add">
+  <div class="topnav">
+    <h2>إضافة دين جديد</h2>
+  </div>
+  <div class="content" style="padding:16px">
+    <div id="add-err" class="err"></div>
+    <div class="fg">
+      <label>العميل <span style="color:var(--red)">*</span></label>
+      <select id="add-cust" class="fi">
+        <option value="">اختر عميلاً...</option>
+      </select>
+    </div>
+    <div class="fg" id="phone-warn-row" style="display:none">
+      <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);
+        border-radius:8px;padding:10px;font-size:13px;color:var(--yel)">
+        ⚠️ هذا العميل لا يوجد لديه رقم هاتف
+      </div>
+    </div>
+    <div class="fg">
+      <label>رقم الهاتف <span style="color:var(--red)">*</span></label>
+      <input type="tel" id="add-phone" class="fi fi-phone" placeholder="05XXXXXXXX">
+    </div>
+    <div class="fg">
+      <label>المبلغ <span style="color:var(--red)">*</span></label>
+      <input type="number" id="add-amount" class="fi" placeholder="0" min="1" step="0.01">
+    </div>
+    <div class="fg">
+      <label>البيان</label>
+      <input type="text" id="add-desc" class="fi" placeholder="بضاعة، خدمة...">
+    </div>
+    <button class="btn btn-red" onclick="submitDebt()" style="margin-top:8px">
+      حفظ الدين
+    </button>
+    <p style="font-size:12px;color:var(--txt3);text-align:center;margin-top:10px">
+      يُحفظ فوراً على الجهاز — يُزامن عند عودة النت
+    </p>
+  </div>
+  <div class="botnav">
+    <button class="bnt" onclick="showTab('home')"><span class="ic">🏠</span>الرئيسية</button>
+    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>العملاء</button>
+    <button class="bnt active" onclick="showTab('add')"><span class="ic">➕</span>إضافة دين</button>
+    <button class="bnt" onclick="showTab('reports')"><span class="ic">📊</span>تقارير</button>
+  </div>
+</div>
+
+<!-- ===== شاشة التقارير ===== -->
+<div class="screen" id="s-reports">
+  <div class="topnav">
+    <h2>تقرير اليوم</h2>
+    <div style="display:flex;gap:8px">
+      <button class="icon-btn" onclick="changeDay(-1)">‹</button>
+      <button class="icon-btn" onclick="changeDay(1)">›</button>
+    </div>
+  </div>
+  <div class="content">
+    <div style="text-align:center;padding:10px;color:var(--txt2);font-size:14px" id="rep-date"></div>
+    <div class="stat-row" id="rep-stats"></div>
+    <div style="padding:0 16px 8px;font-size:13px;font-weight:700;color:var(--txt2)">
+      ديون اليوم
+    </div>
+    <div id="rep-list"></div>
+  </div>
+  <div class="botnav">
+    <button class="bnt" onclick="showTab('home')"><span class="ic">🏠</span>الرئيسية</button>
+    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>العملاء</button>
+    <button class="bnt" onclick="showTab('add')"><span class="ic">➕</span>إضافة دين</button>
+    <button class="bnt active" onclick="showTab('reports')"><span class="ic">📊</span>تقارير</button>
+  </div>
+</div>
+
+<!-- ===== شاشة كشف حساب ===== -->
+<div class="screen" id="s-stmt">
+  <div class="topnav">
+    <button class="icon-btn" onclick="goBack()">←</button>
+    <h2 id="stmt-name">كشف الحساب</h2>
+    <button class="icon-btn" onclick="openPayModal()">💰</button>
+  </div>
+  <div class="content">
+    <div style="padding:14px 16px">
+      <div style="font-size:13px;color:var(--txt2)" id="stmt-phone"></div>
+    </div>
+    <div class="stat-row" id="stmt-stats"></div>
+    <div id="stmt-txlist"></div>
+  </div>
+</div>
+
+<!-- ===== شاشة الإعدادات ===== -->
+<div class="screen" id="s-settings">
+  <div class="topnav">
+    <button class="icon-btn" onclick="goBack()">←</button>
+    <h2>الإعدادات</h2>
+  </div>
+  <div class="content" style="padding:16px">
+    <div id="settings-info" style="background:var(--bg2);border:1px solid var(--brd);
+      border-radius:12px;padding:16px;margin-bottom:16px"></div>
+    <button class="btn btn-grn" onclick="doSync()" style="margin-bottom:10px">
+      🔄 مزامنة الآن
+    </button>
+    <button class="btn btn-gray" onclick="doLogout()">
+      تسجيل الخروج
+    </button>
+  </div>
+</div>
+
+<!-- ===== مودال: إضافة عميل ===== -->
+<div class="modal-bg" id="m-addcust">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('m-addcust')">✕</button>
+    <h3>إضافة عميل جديد</h3>
+    <div id="addcust-err" class="err"></div>
+    <div class="fg">
+      <label>الاسم <span style="color:var(--red)">*</span></label>
+      <input type="text" id="nc-name" class="fi" placeholder="اسم العميل">
+    </div>
+    <div class="fg">
+      <label>رقم الهاتف <span style="color:var(--red)">*</span></label>
+      <input type="tel" id="nc-phone" class="fi fi-phone" placeholder="05XXXXXXXX">
+    </div>
+    <button class="btn btn-grn" onclick="submitNewCustomer()">حفظ العميل</button>
+  </div>
+</div>
+
+<!-- ===== مودال: تسجيل دفعة ===== -->
+<div class="modal-bg" id="m-pay">
+  <div class="modal">
+    <button class="modal-close" onclick="closeModal('m-pay')">✕</button>
+    <h3 id="pay-title">تسجيل دفعة</h3>
+    <div id="pay-err" class="err"></div>
+    <div style="background:var(--bg3);border-radius:10px;padding:12px;margin-bottom:14px">
+      <div style="font-size:13px;color:var(--txt2)">المتبقي</div>
+      <div style="font-size:1.8em;font-weight:900;color:var(--red)" id="pay-remaining">0</div>
+    </div>
+    <div class="fg">
+      <label>المبلغ المدفوع <span style="color:var(--red)">*</span></label>
+      <input type="number" id="pay-amount" class="fi" placeholder="0" min="0.01" step="0.01">
+    </div>
+    <div class="fg">
+      <label>اسم الدافع (اختياري — إذا دفع شخص آخر)</label>
+      <input type="text" id="pay-name" class="fi" placeholder="والده، أخوه...">
+    </div>
+    <div class="fg">
+      <label>صلة القرابة (اختياري)</label>
+      <input type="text" id="pay-rel" class="fi" placeholder="والد، أخ، زوج...">
+    </div>
+    <button class="btn btn-grn" onclick="submitPayment()">تأكيد الدفعة</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// قاعدة البيانات المحلية - Dexie.js (IndexedDB)
+// ================================================================
+const db = new Dexie('DaftarAlDain');
+db.version(1).stores({
+  merchant:     '&id, name, shop_name, currency_symbol, phone',
+  customers:    '&id, merchant_id, name, phone, created_at',
+  transactions: '&id, merchant_id, customer_id, status, created_at',
+  sync_queue:   '++id, type, data, created_at, synced'
+});
+
+// ================================================================
+// الإعدادات
+// ================================================================
+const SUPABASE_URL = 'https://ziehhwdphavnbmltxnmc.supabase.co';
+const LOGIN_URL    = SUPABASE_URL + '/functions/v1/login-final';
+const SYNC_URL     = SUPABASE_URL + '/functions/v1/offline-sync';
+
+let SESSION = null; // { merchant_id, token, name, shop_name, currency }
+let CUR = '₪';
+let currentCustomer = null;
+let currentTxId = null;
+let repDate = new Date().toISOString().slice(0,10);
+let prevScreen = 's-home';
+
+// ================================================================
+// تهيئة
+// ================================================================
+async function init() {
+  const saved = localStorage.getItem('session');
+  if (saved) {
+    SESSION = JSON.parse(saved);
+    CUR = SESSION.currency || '₪';
+    showScreen('s-home');
+    await loadHomeData();
+    monitorConnection();
+    // مزامنة تلقائية عند الفتح إذا يوجد نت
+    if (navigator.onLine) setTimeout(doSync, 1500);
+  }
+}
+
+// ================================================================
+// تسجيل الدخول
+// ================================================================
+async function doLogin() {
+  const phone = document.getElementById('inp-phone').value.trim();
+  const pin   = document.getElementById('inp-pin').value.trim();
+  const err   = document.getElementById('login-err');
+  const btn   = document.getElementById('login-btn');
+
+  if (!phone) { showErr(err, 'أدخل رقم الهاتف'); return; }
+  if (!pin)   { showErr(err, 'أدخل الرقم السري'); return; }
+
+  err.style.display = 'none';
+  btn.textContent = 'جاري...';
+  btn.disabled = true;
+
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', phone, pin })
+    });
+    const d = await res.json();
+
+    if (d.error) { showErr(err, d.error); return; }
+    if (d.ok) {
+      SESSION = {
+        merchant_id: d.merchant_id,
+        token:       d.token,
+        name:        d.name,
+        shop_name:   d.shop_name,
+        currency:    d.currency || '₪'
+      };
+      CUR = SESSION.currency;
+      localStorage.setItem('session', JSON.stringify(SESSION));
+
+      // جلب البيانات الأولية
+      await pullFromServer();
+      showScreen('s-home');
+      await loadHomeData();
+      monitorConnection();
+      setTimeout(doSync, 500);
+    }
+    if (d.need_setup) {
+      showErr(err, 'يجب ضبط الرقم السري أولاً عبر المتصفح');
+    }
+  } catch(e) {
+    showErr(err, 'لا يوجد اتصال — تأكد من الإنترنت عند الدخول الأول');
+  } finally {
+    btn.textContent = 'دخول';
+    btn.disabled = false;
+  }
+}
+
+// ================================================================
+// جلب البيانات من السيرفر (أول مرة أو عند الطلب)
+// ================================================================
+async function pullFromServer() {
+  if (!SESSION || !navigator.onLine) return;
+  try {
+    const res = await fetch(SYNC_URL + '?tok=' + encodeURIComponent(SESSION.token));
+    const d = await res.json();
+    if (!d.ok) return;
+
+    // حفظ في IndexedDB
+    await db.merchant.put({
+      id: SESSION.merchant_id,
+      name: d.merchant?.name || '',
+      shop_name: d.merchant?.shop_name || '',
+      currency_symbol: d.merchant?.currency_symbol || '₪',
+      phone: d.merchant?.phone || ''
+    });
+
+    if (d.customers?.length) {
+      await db.customers.bulkPut(d.customers);
+    }
+    if (d.transactions?.length) {
+      await db.transactions.bulkPut(d.transactions);
+    }
+  } catch(e) { /* صامت */ }
+}
+
+// ================================================================
+// مزامنة التغييرات المحلية للسيرفر (push)
+// ================================================================
+async function doSync() {
+  if (!SESSION || !navigator.onLine) return;
+  updateSyncBar('syncing');
+
+  try {
+    // جلب التغييرات غير المزامنة
+    const pending = await db.sync_queue.where('synced').equals(0).toArray();
+    if (pending.length === 0) {
+      await pullFromServer();
+      updateSyncBar('online', 0);
+      return;
+    }
+
+    const changes = pending.map(p => p.data);
+    const res = await fetch(SYNC_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tok: SESSION.token, changes })
+    });
+    const d = await res.json();
+
+    if (d.ok) {
+      // وضع علامة "تمت المزامنة"
+      const ids = pending.map(p => p.id);
+      await db.sync_queue.where('id').anyOf(ids).modify({ synced: 1 });
+      await pullFromServer();
+      updateSyncBar('online', 0);
+    }
+  } catch(e) {
+    updateSyncBar('offline', await getPendingCount());
+  }
+}
+
+async function getPendingCount() {
+  return db.sync_queue.where('synced').equals(0).count();
+}
+
+// ================================================================
+// تحديث شريط المزامنة
+// ================================================================
+function updateSyncBar(state, pending=0) {
+  const bar = document.getElementById('sync-bar');
+  const txt = document.getElementById('sync-txt');
+  bar.className = 'sync-bar';
+  if (state === 'online') {
+    bar.classList.add('sync-online');
+    txt.innerHTML = '🟢 متصل — جميع البيانات محفوظة';
+  } else if (state === 'offline') {
+    bar.classList.add('sync-offline');
+    txt.innerHTML = '🔴 غير متصل' + (pending > 0 ? ` — ${pending} تغيير معلق` : '');
+  } else if (state === 'syncing') {
+    bar.classList.add('sync-pending');
+    txt.innerHTML = '🔄 جاري المزامنة...';
+  } else if (state === 'pending') {
+    bar.classList.add('sync-pending');
+    txt.innerHTML = `🟡 ${pending} تغيير في انتظار النت`;
+  }
+}
+
+// ================================================================
+// مراقبة الاتصال
+// ================================================================
+function monitorConnection() {
+  const badge = document.getElementById('offline-badge');
+
+  async function onOnline() {
+    badge.classList.remove('show');
+    updateSyncBar('syncing');
+    await doSync();
+  }
+  function onOffline() {
+    badge.classList.add('show');
+    getPendingCount().then(n => updateSyncBar('offline', n));
+  }
+
+  window.addEventListener('online', onOnline);
+  window.addEventListener('offline', onOffline);
+
+  if (!navigator.onLine) onOffline();
+  else updateSyncBar('online');
+}
+
+// ================================================================
+// إضافة للـ sync queue
+// ================================================================
+async function addToQueue(type, data) {
+  return db.sync_queue.add({
+    type, data,
+    created_at: new Date().toISOString(),
+    synced: 0
+  });
+}
+
+// ================================================================
+// إضافة عميل
+// ================================================================
+async function submitNewCustomer() {
+  const name  = document.getElementById('nc-name').value.trim();
+  const phone = document.getElementById('nc-phone').value.trim();
+  const err   = document.getElementById('addcust-err');
+
+  if (!name)  { showErr(err, 'أدخل الاسم'); return; }
+  if (!phone) { showErr(err, 'رقم الهاتف مطلوب'); return; }
+
+  const id = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  // حفظ فوري محلياً
+  await db.customers.add({
+    id, merchant_id: SESSION.merchant_id,
+    name, phone,
+    has_whatsapp: true,
+    created_at: now
+  });
+
+  // إضافة لقائمة المزامنة
+  await addToQueue('add_customer', { local_id: id, name, phone, created_at: now });
+
+  closeModal('m-addcust');
+  document.getElementById('nc-name').value = '';
+  document.getElementById('nc-phone').value = '';
+  await renderCustomers();
+  await populateCustomerSelect();
+
+  // مزامنة إذا يوجد نت
+  if (navigator.onLine) doSync();
+  else getPendingCount().then(n => updateSyncBar('pending', n));
+}
+
+// ================================================================
+// إضافة دين
+// ================================================================
+async function submitDebt() {
+  const custId = document.getElementById('add-cust').value;
+  const phone  = document.getElementById('add-phone').value.trim();
+  const amount = parseFloat(document.getElementById('add-amount').value);
+  const desc   = document.getElementById('add-desc').value.trim();
+  const err    = document.getElementById('add-err');
+
+  if (!custId)       { showErr(err, 'اختر عميلاً'); return; }
+  if (!phone)        { showErr(err, 'رقم الهاتف مطلوب'); return; }
+  if (!amount || amount <= 0) { showErr(err, 'أدخل مبلغاً صحيحاً'); return; }
+
+  // تحديث هاتف العميل إن تغير
+  await db.customers.where('id').equals(custId).modify({ phone });
+
+  const id  = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  // حفظ فوري محلياً
+  await db.transactions.add({
+    id, merchant_id: SESSION.merchant_id,
+    customer_id: custId, amount,
+    description: desc || 'دين',
+    status: 'غير مدفوع',
+    created_at: now
+  });
+
+  // إضافة لقائمة المزامنة
+  await addToQueue('add_transaction', {
+    local_id: id, customer_id: custId,
+    amount, description: desc || 'دين', created_at: now
+  });
+
+  err.style.display = 'none';
+  document.getElementById('add-amount').value = '';
+  document.getElementById('add-desc').value = '';
+  document.getElementById('add-cust').value = '';
+
+  alert('✅ تم حفظ الدين محلياً');
+  await loadHomeData();
+
+  if (navigator.onLine) doSync();
+  else getPendingCount().then(n => updateSyncBar('pending', n));
+}
+
+// ================================================================
+// تسجيل دفعة
+// ================================================================
+function openPayModal(txId, remaining, custId, desc) {
+  currentTxId = txId;
+  currentCustomer = custId;
+  document.getElementById('pay-remaining').textContent = remaining.toFixed(2) + ' ' + CUR;
+  document.getElementById('pay-title').textContent = 'تسجيل دفعة — ' + (desc || 'دين');
+  document.getElementById('pay-amount').value = '';
+  document.getElementById('pay-name').value = '';
+  document.getElementById('pay-rel').value = '';
+  document.getElementById('pay-err').style.display = 'none';
+  openModal('m-pay');
+}
+
+async function submitPayment() {
+  const amount = parseFloat(document.getElementById('pay-amount').value);
+  const payer  = document.getElementById('pay-name').value.trim();
+  const rel    = document.getElementById('pay-rel').value.trim();
+  const err    = document.getElementById('pay-err');
+
+  if (!amount || amount <= 0) { showErr(err, 'أدخل المبلغ'); return; }
+
+  const id  = crypto.randomUUID();
+  const now = new Date().toISOString();
+
+  // تحديث محلي فوري
+  await db.transactions.where('id').equals(currentTxId).modify({
+    status: 'مدفوع',
+    payment_confirmed_at: now
+  });
+
+  // إضافة قسط كمعاملة محلية
+  await db.transactions.add({
+    id, merchant_id: SESSION.merchant_id,
+    customer_id: currentCustomer,
+    amount,
+    description: payer ? `دفع: ${payer}${rel ? ' (' + rel + ')' : ''}` : 'دفعة',
+    status: 'مدفوع',
+    is_partial_payment: true,
+    partial_payment_parent_id: currentTxId,
+    created_at: now
+  });
+
+  // إضافة لقائمة المزامنة
+  await addToQueue('record_payment', {
+    local_id: id,
+    transaction_id: currentTxId,
+    customer_id: currentCustomer,
+    amount,
+    payer_name: payer || null,
+    payer_relationship: rel || null
+  });
+
+  closeModal('m-pay');
+  await renderStatement(currentCustomer);
+  await loadHomeData();
+
+  if (navigator.onLine) doSync();
+  else getPendingCount().then(n => updateSyncBar('pending', n));
+}
+
+// ================================================================
+// رسم الرئيسية
+// ================================================================
+async function loadHomeData() {
+  if (!SESSION) return;
+  const mid = SESSION.merchant_id;
+
+  document.getElementById('shop-name').textContent = SESSION.shop_name || 'دفتر الدين';
+
+  const allTx = await db.transactions.where('merchant_id').equals(mid).toArray();
+  const pending = allTx.filter(t => t.status === 'غير مدفوع' && !t.is_partial_payment);
+  const pendingAmt = pending.reduce((s,t) => s + Number(t.amount||0), 0);
+  const paidAmt    = allTx.filter(t => t.status === 'مدفوع').reduce((s,t) => s + Number(t.amount||0), 0);
+
+  document.getElementById('home-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--red)">${pendingAmt.toFixed(2)} ${CUR}</div>
+      <div class="stat-lbl">إجمالي الديون</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--grn)">${paidAmt.toFixed(2)} ${CUR}</div>
+      <div class="stat-lbl">إجمالي المحصّل</div>
+    </div>`;
+
+  // آخر 10 ديون
+  const latest = pending.sort((a,b) => new Date(b.created_at) - new Date(a.created_at)).slice(0,10);
+  const custs  = await db.customers.where('merchant_id').equals(mid).toArray();
+  const custMap = Object.fromEntries(custs.map(c => [c.id, c]));
+
+  if (!latest.length) {
+    document.getElementById('home-txlist').innerHTML =
+      '<div class="empty"><div class="em-icon">📒</div><p>لا توجد ديون معلقة</p></div>';
+    return;
+  }
+
+  document.getElementById('home-txlist').innerHTML = latest.map(t => {
+    const c = custMap[t.customer_id] || {};
+    const d = t.created_at ? new Date(t.created_at).toLocaleDateString('ar-EG') : '';
+    return `<div class="list-item" onclick="openStmt('${t.customer_id}')">
+      <div class="li-avatar">${(c.name||'؟')[0]}</div>
+      <div class="li-info">
+        <div class="li-name">${c.name||'غير معروف'}</div>
+        <div class="li-phone">${c.phone||''}</div>
+        <div class="li-meta">${t.description||'دين'} — ${d}</div>
+      </div>
+      <div class="li-right">
+        <div class="li-amt" style="color:var(--red)">${Number(t.amount).toFixed(2)} ${CUR}</div>
+        <span class="li-status s-unpaid">معلق</span>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+// رسم قائمة العملاء
+// ================================================================
+async function renderCustomers(filter='') {
+  const mid   = SESSION.merchant_id;
+  let custs   = await db.customers.where('merchant_id').equals(mid).toArray();
+  if (filter) custs = custs.filter(c => c.name.includes(filter) || (c.phone||'').includes(filter));
+
+  const allTx = await db.transactions.where('merchant_id').equals(mid).toArray();
+
+  if (!custs.length) {
+    document.getElementById('cust-list').innerHTML =
+      '<div class="empty"><div class="em-icon">👥</div><p>لا يوجد عملاء — أضف عميلاً</p></div>';
+    return;
+  }
+
+  document.getElementById('cust-list').innerHTML = custs.map(c => {
+    const txs = allTx.filter(t => t.customer_id === c.id && t.status === 'غير مدفوع' && !t.is_partial_payment);
+    const debt = txs.reduce((s,t) => s + Number(t.amount||0), 0);
+    return `<div class="list-item" onclick="openStmt('${c.id}')">
+      <div class="li-avatar">${c.name[0]}</div>
+      <div class="li-info">
+        <div class="li-name">${c.name}</div>
+        <div class="li-phone">${c.phone||''}</div>
+        <div class="li-meta">${txs.length} دين معلق</div>
+      </div>
+      <div class="li-right">
+        <div class="li-amt" style="color:${debt>0?'var(--red)':'var(--grn)'}">
+          ${debt.toFixed(2)} ${CUR}
+        </div>
+        ${debt>0?'<span class="li-status s-unpaid">مديون</span>':
+                 '<span class="li-status s-paid">سوي</span>'}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function filterCustomers(q) { await renderCustomers(q); }
+
+// ================================================================
+// كشف حساب عميل
+// ================================================================
+async function openStmt(custId) {
+  prevScreen = document.querySelector('.screen.active').id;
+  currentCustomer = custId;
+  await renderStatement(custId);
+  showScreen('s-stmt');
+}
+
+async function renderStatement(custId) {
+  const c    = await db.customers.get(custId) || {};
+  const txs  = await db.transactions.where('customer_id').equals(custId).toArray();
+
+  document.getElementById('stmt-name').textContent  = c.name || 'كشف الحساب';
+  document.getElementById('stmt-phone').textContent = c.phone || '';
+
+  const debts = txs.filter(t => !t.is_partial_payment);
+  const totalDebt = debts.reduce((s,t) => s + Number(t.amount||0), 0);
+  const totalPaid = txs.filter(t => t.is_partial_payment && t.status==='مدفوع')
+    .reduce((s,t) => s + Number(t.amount||0), 0);
+  const bal = totalDebt - totalPaid;
+
+  document.getElementById('stmt-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--yel)">${totalDebt.toFixed(2)} ${CUR}</div>
+      <div class="stat-lbl">إجمالي الديون</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:${bal>0?'var(--red)':'var(--grn)'}">
+        ${bal.toFixed(2)} ${CUR}
+      </div>
+      <div class="stat-lbl">الرصيد المتبقي</div>
+    </div>`;
+
+  if (!debts.length) {
+    document.getElementById('stmt-txlist').innerHTML =
+      '<div class="empty"><div class="em-icon">✅</div><p>لا توجد معاملات</p></div>';
+    return;
+  }
+
+  document.getElementById('stmt-txlist').innerHTML = debts.map(t => {
+    const paid = txs.filter(p => p.partial_payment_parent_id === t.id)
+      .reduce((s,p) => s + Number(p.amount||0), 0);
+    const rem  = Number(t.amount) - paid;
+    const isPaid = t.status === 'مدفوع' || rem <= 0;
+    const d    = t.created_at ? new Date(t.created_at).toLocaleDateString('ar-EG') : '';
+    return `<div class="tx-item">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start">
+        <div>
+          <div class="tx-desc">${t.description||'دين'}</div>
+          <div class="tx-meta">${d}</div>
+          ${paid>0?`<div class="tx-meta" style="color:var(--grn)">مدفوع: ${paid.toFixed(2)} ${CUR}</div>`:''}
+        </div>
+        <div style="text-align:left">
+          <div class="tx-amt" style="color:var(--red)">${Number(t.amount).toFixed(2)} ${CUR}</div>
+          <span class="li-status ${isPaid?'s-paid':paid>0?'s-partial':'s-unpaid'}">
+            ${isPaid?'مسدَّد':paid>0?'جزئي':'معلق'}
+          </span>
+        </div>
+      </div>
+      ${!isPaid?`<button class="btn btn-grn btn-sm" style="margin-top:10px;width:100%"
+        onclick="openPayModal('${t.id}',${rem},'${t.customer_id}','${t.description||'دين'}')">
+        💰 تسجيل دفعة (${rem.toFixed(2)} ${CUR} متبقي)
+      </button>`:''}
+    </div>`;
+  }).join('');
+}
+
+// ================================================================
+// تقارير اليوم
+// ================================================================
+async function loadReport() {
+  const mid   = SESSION.merchant_id;
+  const today = repDate;
+
+  document.getElementById('rep-date').textContent =
+    new Date(today+'T12:00:00').toLocaleDateString('ar-EG',
+      {weekday:'long',year:'numeric',month:'long',day:'numeric'});
+
+  const allTx = await db.transactions.where('merchant_id').equals(mid).toArray();
+  const todayTx = allTx.filter(t => t.created_at?.slice(0,10) === today && !t.is_partial_payment);
+  const todayPaid = allTx.filter(t => t.payment_confirmed_at?.slice(0,10) === today || 
+    (t.created_at?.slice(0,10) === today && t.status === 'مدفوع'));
+
+  const newDebt = todayTx.reduce((s,t) => s + Number(t.amount||0), 0);
+  const collected = todayPaid.filter(t=>t.is_partial_payment).reduce((s,t) => s + Number(t.amount||0), 0);
+
+  document.getElementById('rep-stats').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--red)">${newDebt.toFixed(2)} ${CUR}</div>
+      <div class="stat-lbl">ديون جديدة</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-num" style="color:var(--grn)">${collected.toFixed(2)} ${CUR}</div>
+      <div class="stat-lbl">محصّل اليوم</div>
+    </div>`;
+
+  const custs = await db.customers.where('merchant_id').equals(mid).toArray();
+  const custMap = Object.fromEntries(custs.map(c => [c.id, c]));
+
+  document.getElementById('rep-list').innerHTML = todayTx.length ?
+    todayTx.map(t => {
+      const c = custMap[t.customer_id] || {};
+      return `<div class="list-item" onclick="openStmt('${t.customer_id}')">
+        <div class="li-avatar">${(c.name||'؟')[0]}</div>
+        <div class="li-info">
+          <div class="li-name">${c.name||'غير معروف'}</div>
+          <div class="li-phone">${c.phone||''}</div>
+          <div class="li-meta">${t.description||'دين'}</div>
+        </div>
+        <div class="li-right">
+          <div class="li-amt" style="color:var(--red)">${Number(t.amount).toFixed(2)} ${CUR}</div>
+        </div>
+      </div>`;
+    }).join('') :
+    '<div class="empty"><div class="em-icon">📊</div><p>لا توجد معاملات هذا اليوم</p></div>';
+}
+
+function changeDay(d) {
+  const dt = new Date(repDate+'T12:00:00');
+  dt.setDate(dt.getDate() + d);
+  if (dt > new Date()) return;
+  repDate = dt.toISOString().slice(0,10);
+  loadReport();
+}
+
+// ================================================================
+// إعداد قائمة العملاء في فورم الدين
+// ================================================================
+async function populateCustomerSelect() {
+  if (!SESSION) return;
+  const custs = await db.customers.where('merchant_id').equals(SESSION.merchant_id).toArray();
+  const sel   = document.getElementById('add-cust');
+  sel.innerHTML = '<option value="">اختر عميلاً...</option>' +
+    custs.map(c => `<option value="${c.id}" data-phone="${c.phone||''}">${c.name}</option>`).join('');
+
+  sel.onchange = () => {
+    const opt = sel.options[sel.selectedIndex];
+    const phone = opt?.dataset?.phone || '';
+    document.getElementById('add-phone').value = phone;
+    document.getElementById('phone-warn-row').style.display = phone ? 'none' : (sel.value ? 'block' : 'none');
+  };
+}
+
+// ================================================================
+// التبويبات
+// ================================================================
+async function showTab(tab) {
+  const map = {
+    'home':      's-home',
+    'customers': 's-customers',
+    'add':       's-add',
+    'reports':   's-reports'
+  };
+  showScreen(map[tab]);
+
+  if (tab === 'customers') await renderCustomers();
+  if (tab === 'add')       await populateCustomerSelect();
+  if (tab === 'reports')   await loadReport();
+}
+
+// ================================================================
+// الإعدادات
+// ================================================================
+async function showSettings() {
+  const pending = await getPendingCount();
+  const custs   = await db.customers.count();
+  const txs     = await db.transactions.count();
+  document.getElementById('settings-info').innerHTML = `
+    <div style="font-size:15px;font-weight:700;margin-bottom:10px">${SESSION?.shop_name||''}</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:6px">📞 ${SESSION?.name||''}</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:6px">👥 ${custs} عميل محفوظ</div>
+    <div style="font-size:13px;color:var(--txt2);margin-bottom:6px">📋 ${txs} معاملة</div>
+    <div style="font-size:13px;color:${pending>0?'var(--yel)':'var(--grn)'}">
+      ${pending>0?`🟡 ${pending} تغيير في انتظار المزامنة`:'🟢 كل البيانات مزامَنة'}
+    </div>`;
+}
+
+// ================================================================
+// مساعدات
+// ================================================================
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+  if (id === 's-settings') showSettings();
+}
+
+function goBack() { showScreen(prevScreen); }
+
+function openModal(id) {
+  document.getElementById(id).classList.add('open');
+}
+function closeModal(id) {
+  document.getElementById(id).classList.remove('open');
+}
+
+function showErr(el, msg) {
+  el.textContent = msg;
+  el.style.display = 'block';
+}
+
+function doLogout() {
+  if (confirm('تأكيد تسجيل الخروج؟ ستبقى البيانات على الجهاز')) {
+    localStorage.removeItem('session');
+    SESSION = null;
+    showScreen('s-login');
+  }
+}
+
+// ================================================================
+// تشغيل
+// ================================================================
+init();
+</script>
+</body>
+</html>
