@@ -47,20 +47,10 @@ function onCountryChange() {
 }
 
 function acceptTermsAndSetup() {
-  const chk = document.getElementById('terms-agree');
-  if (chk && !chk.checked) {
-    chk.closest('label').style.border = '2px solid var(--red)';
-    chk.closest('label').style.borderRadius = '10px';
-    chk.closest('label').style.padding = '8px';
-    setTimeout(() => {
-      chk.closest('label').style.border = '';
-      chk.closest('label').style.padding = '';
-    }, 2000);
-    return;
-  }
   // حفظ الموافقة محلياً
   localStorage.setItem('terms_agreed', Date.now().toString());
   showScreen('s-setup-shop');
+  // تعبئة الرقم كواتساب افتراضياً
   if (SESSION?.phone) {
     document.getElementById('setup-wa').value = SESSION.phone;
   }
@@ -1867,6 +1857,123 @@ if ('serviceWorker' in navigator) {
         });
       });
     }).catch(() => {});
+}
+
+// ================================================================
+// تسجيل مستخدم جديد
+// ================================================================
+let newMerchantId = null;
+
+async function doRegister() {
+  const phone = document.getElementById('reg-phone').value.trim();
+  const name  = document.getElementById('reg-name').value.trim();
+  const err   = document.getElementById('reg-err');
+
+  if (!phone) { showErr(err, 'أدخل رقم الهاتف'); return; }
+  if (!name)  { showErr(err, 'أدخل اسمك'); return; }
+
+  err.style.display = 'none';
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'register', phone, name })
+    });
+    const d = await res.json();
+    if (d.error) { showErr(err, d.error); return; }
+    if (d.ok && d.need_setup) {
+      newMerchantId = d.merchant_id;
+      document.getElementById('reg-step1').style.display = 'none';
+      document.getElementById('reg-step2').style.display = 'block';
+    }
+  } catch(e) {
+    showErr(err, 'تأكد من الاتصال بالإنترنت');
+  }
+}
+
+async function doSetPin() {
+  const pin1 = document.getElementById('reg-pin1').value.trim();
+  const pin2 = document.getElementById('reg-pin2').value.trim();
+  const err  = document.getElementById('reg-err');
+
+  if (pin1.length < 4) { showErr(err, 'الرقم السري 4 أرقام على الأقل'); return; }
+  if (pin1 !== pin2)   { showErr(err, 'الرقمان غير متطابقين'); return; }
+
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_pin', merchant_id: newMerchantId, pin: pin1 })
+    });
+    const d = await res.json();
+    if (d.error) { showErr(err, d.error); return; }
+    document.getElementById('inp-phone').value = document.getElementById('reg-phone').value;
+    document.getElementById('inp-pin').value   = pin1;
+    showScreen('s-login');
+    doLogin();
+  } catch(e) {
+    showErr(err, 'تأكد من الاتصال بالإنترنت');
+  }
+}
+
+// ================================================================
+// نسيت الرقم السري
+// ================================================================
+let forgotMerchantId = null;
+
+async function doSendOTP() {
+  const phone = document.getElementById('fgt-phone').value.trim();
+  const err   = document.getElementById('fgt-err');
+
+  if (!phone) { showErr(err, 'أدخل رقم الهاتف'); return; }
+  err.style.display = 'none';
+
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'gen_otp', phone })
+    });
+    const d = await res.json();
+    if (d.error) { showErr(err, d.error); return; }
+    forgotMerchantId = d.merchant_id;
+    document.getElementById('fgt-step1').style.display = 'none';
+    document.getElementById('fgt-step2').style.display = 'block';
+  } catch(e) {
+    showErr(err, 'تأكد من الاتصال بالإنترنت');
+  }
+}
+
+async function doResetPin() {
+  const otp = document.getElementById('fgt-otp').value.trim();
+  const pin = document.getElementById('fgt-pin').value.trim();
+  const err = document.getElementById('fgt-err');
+
+  if (!otp)           { showErr(err, 'أدخل رمز التحقق'); return; }
+  if (pin.length < 4) { showErr(err, 'الرقم السري 4 أرقام على الأقل'); return; }
+
+  try {
+    const r1 = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'verify_otp', merchant_id: forgotMerchantId, otp })
+    });
+    const d1 = await r1.json();
+    if (d1.error || !d1.ok) { showErr(err, d1.error || 'رمز التحقق غير صحيح'); return; }
+
+    const r2 = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'set_pin', merchant_id: forgotMerchantId, pin })
+    });
+    const d2 = await r2.json();
+    if (d2.error) { showErr(err, d2.error); return; }
+
+    alert('✅ تم تغيير الرقم السري — ادخل الآن');
+    showScreen('s-login');
+  } catch(e) {
+    showErr(err, 'تأكد من الاتصال بالإنترنت');
+  }
 }
 
 init();
