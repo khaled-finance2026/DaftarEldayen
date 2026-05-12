@@ -497,7 +497,7 @@ select.fi option{
     <div class="login-logo">
       <div class="icon">📒</div>
       <h1>دفتر الدين</h1>
-      <p>نظام التحصيل الذكي</p>
+      <p>معاملات الزبائن</p>
     </div>
     <div id="login-err" class="err"></div>
     <div class="fg">
@@ -508,11 +508,31 @@ select.fi option{
     </div>
     <div class="fg" style="margin-bottom:18px">
       <label>الرقم السري</label>
-      <input type="password" id="inp-pin" class="fi fi-pin"
-        placeholder="••••" maxlength="8" inputmode="numeric"
-        onkeydown="if(event.key==='Enter')doLogin()">
+      <div style="position:relative">
+        <input type="password" id="inp-pin" class="fi fi-pin"
+          placeholder="••••" maxlength="8" inputmode="numeric"
+          onkeydown="if(event.key==='Enter')doLogin()"
+          style="padding-left:52px">
+        <button type="button"
+          onclick="var i=document.getElementById('inp-pin');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'"
+          style="position:absolute;left:14px;top:50%;transform:translateY(-50%);
+          background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3);
+          padding:4px;line-height:1">👁</button>
+      </div>
     </div>
     <button class="btn btn-pri" id="login-btn" onclick="doLogin()">دخول</button>
+    <div style="display:flex;justify-content:space-between;margin-top:14px">
+      <button onclick="showScreen('s-register')"
+        style="background:none;border:none;color:var(--pri);font-size:15px;
+        font-weight:700;cursor:pointer;padding:4px">
+        مستخدم جديد ←
+      </button>
+      <button onclick="showScreen('s-forgot')"
+        style="background:none;border:none;color:var(--txt3);font-size:15px;
+        font-weight:700;cursor:pointer;padding:4px">
+        نسيت الرقم السري
+      </button>
+    </div>
   </div>
 </div>
 
@@ -567,22 +587,17 @@ select.fi option{
       <div style="background:var(--bg2);border:2px solid var(--brd);border-radius:14px;padding:16px;margin-bottom:16px">
         <label style="display:flex;align-items:center;gap:14px;cursor:pointer">
           <input type="checkbox" id="terms-agree" style="width:22px;height:22px;accent-color:var(--pri);flex-shrink:0"
-            onchange="var b=document.getElementById('btn-agree-terms');b.disabled=!this.checked;b.style.opacity=this.checked?'1':'.4'">
+            onchange="document.getElementById('btn-agree-terms').disabled=!this.checked">
           <span style="font-size:15px;color:var(--txt);font-weight:600;line-height:1.6">
             قرأت الاتفاقية وأوافق على جميع بنودها بما فيها مسؤولية الترحيل اليومي
           </span>
         </label>
       </div>
-<button onclick="doLogout()"
-  style="width:100%;padding:14px;background:transparent;color:var(--txt3);
-  border:1.5px solid var(--brd);border-radius:12px;font-size:16px;
-  font-weight:700;cursor:pointer;margin-bottom:10px">
-  رفض — العودة للخروج
-</button>
-      <button id="btn-agree-terms" onclick="acceptTermsAndSetup()"
+
+      <button id="btn-agree-terms" disabled onclick="acceptTermsAndSetup()"
         style="width:100%;padding:16px;background:linear-gradient(135deg,#1d4ed8,#3b82f6);
         color:#fff;border:none;border-radius:12px;font-size:17px;font-weight:800;cursor:pointer;
-        opacity:.1;transition:opacity .2s"
+        opacity:.4;transition:opacity .2s"
         onmouseenter="if(!this.disabled)this.style.opacity='.9'"
         onmouseleave="if(!this.disabled)this.style.opacity='1'">
         موافق — إعداد المتجر ←
@@ -1063,6 +1078,98 @@ select.fi option{
         onclick="window.print()">🖨️ طباعة</button>
       <button class="btn" style="flex:1;padding:12px;font-size:16px;border:none;border-radius:10px;cursor:pointer;color:var(--txt);background:var(--bg3)"
         onclick="shareInvoiceEmail()">📧 بريد</button>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== شاشة التسجيل ===== -->
+<div class="screen" id="s-register">
+  <div style="height:100%;overflow-y:auto;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(16,185,129,.2),transparent)">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="icon">📝</div>
+        <h1 style="color:var(--grn)">حساب جديد</h1>
+        <p>سجّل رقمك وابدأ مجاناً</p>
+      </div>
+      <div id="reg-err" class="err"></div>
+      <div id="reg-step1">
+        <div class="fg">
+          <label>رقم الهاتف <span style="color:var(--red)">*</span></label>
+          <input type="tel" id="reg-phone" class="fi fi-phone" placeholder="+970XXXXXXXXX" dir="ltr">
+        </div>
+        <div class="fg">
+          <label>اسمك <span style="color:var(--red)">*</span></label>
+          <input type="text" id="reg-name" class="fi" placeholder="اسمك الكامل">
+        </div>
+        <button class="btn btn-grn" onclick="doRegister()">التالي ←</button>
+      </div>
+      <div id="reg-step2" style="display:none">
+        <div class="fg">
+          <label>رقم سري (4-8 أرقام) <span style="color:var(--red)">*</span></label>
+          <input type="password" id="reg-pin1" class="fi fi-pin"
+            placeholder="••••" maxlength="8" inputmode="numeric">
+        </div>
+        <div class="fg">
+          <label>تأكيد الرقم السري</label>
+          <input type="password" id="reg-pin2" class="fi fi-pin"
+            placeholder="••••" maxlength="8" inputmode="numeric">
+        </div>
+        <button class="btn btn-grn" onclick="doSetPin()">إنشاء الحساب</button>
+      </div>
+      <button onclick="showScreen('s-login')"
+        style="width:100%;margin-top:12px;background:none;border:none;
+        color:var(--txt3);font-size:15px;cursor:pointer;padding:8px">
+        ← العودة للدخول
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== شاشة نسيت الرقم السري ===== -->
+<div class="screen" id="s-forgot">
+  <div style="height:100%;overflow-y:auto;display:flex;flex-direction:column;
+    align-items:center;justify-content:center;padding:24px;
+    background:radial-gradient(ellipse 80% 50% at 50% 0%,rgba(251,191,36,.15),transparent)">
+    <div class="login-card">
+      <div class="login-logo">
+        <div class="icon">🔑</div>
+        <h1 style="color:var(--yel)">نسيت الرقم السري</h1>
+        <p>سنرسل رمز التحقق لهاتفك</p>
+      </div>
+      <div id="fgt-err" class="err"></div>
+      <div id="fgt-step1">
+        <div class="fg">
+          <label>رقم الهاتف المسجل</label>
+          <input type="tel" id="fgt-phone" class="fi fi-phone" placeholder="+970XXXXXXXXX" dir="ltr">
+        </div>
+        <button class="btn btn-pri" onclick="doSendOTP()">إرسال رمز التحقق</button>
+      </div>
+      <div id="fgt-step2" style="display:none">
+        <div style="background:rgba(251,191,36,.1);border:1.5px solid rgba(251,191,36,.3);
+          border-radius:12px;padding:14px;margin-bottom:16px;font-size:14px;
+          color:var(--yel);line-height:1.7">
+          📲 تم إرسال رمز التحقق لهاتفك عبر واتساب
+        </div>
+        <div class="fg">
+          <label>رمز التحقق</label>
+          <input type="text" id="fgt-otp" class="fi fi-pin"
+            placeholder="000000" maxlength="6" inputmode="numeric" dir="ltr">
+        </div>
+        <div class="fg">
+          <label>رقم سري جديد</label>
+          <input type="password" id="fgt-pin" class="fi fi-pin"
+            placeholder="••••" maxlength="8" inputmode="numeric">
+        </div>
+        <button class="btn btn-pri" onclick="doResetPin()">حفظ الرقم الجديد</button>
+      </div>
+      <button onclick="showScreen('s-login')"
+        style="width:100%;margin-top:12px;background:none;border:none;
+        color:var(--txt3);font-size:15px;cursor:pointer;padding:8px">
+        ← العودة للدخول
+      </button>
     </div>
   </div>
 </div>
