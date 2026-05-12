@@ -20,6 +20,7 @@ let invRows = [];
 let currentInvoice = null;
 let custSortMode = 'debt';   // وضع الفرز الحالي
 let custSearchQ  = '';       // نص البحث الحالي
+let PLAN = null;
 
 // ================================================================
 // إعداد المتجر والاتفاقية
@@ -28,10 +29,10 @@ let currentSetupLogo = '🏪';
 
 function setStoreLogo(emoji) {
   currentSetupLogo = emoji;
-  document.getElementById('setup-logo-preview').textContent = emoji;
-  document.querySelectorAll('.logo-btn').forEach(b => b.classList.remove('active'));
-  // إيجاد الزر الصحيح بالمحتوى
+  const preview = document.getElementById('setup-logo-preview');
+  if (preview) preview.textContent = emoji;
   document.querySelectorAll('.logo-btn').forEach(b => {
+    b.classList.remove('active');
     if (b.textContent.trim() === emoji) b.classList.add('active');
   });
 }
@@ -599,38 +600,60 @@ function shareInvoiceEmail() {
 // تهيئة
 // ================================================================
 async function init() {
-  // فتح قاعدة البيانات المحلية
   try { await db.open(); } catch(e) { console.warn('DB open failed', e); }
-  
-  // يقرأ الجلسة المحفوظة — تعمل بدون إنترنت
+
   const saved = localStorage.getItem('dd_session') || localStorage.getItem('session');
-  if (saved) {
-    try {
-      SESSION = JSON.parse(saved);
-      CUR  = SESSION.currency || '₪';
-      PLAN = SESSION.plan || null;
-      // تحقق من صلاحية الجلسة (30 يوم)
-      const savedAt = SESSION.saved_at || Date.now();
-      const days30  = 30 * 24 * 3600 * 1000;
-      if (Date.now() - savedAt > days30 && !navigator.onLine) {
-        // جلسة منتهية وبدون نت — اعرض رسالة واضحة
-        showScreen('s-login');
-        showErr(document.getElementById('login-err'),
-          'انتهت الجلسة — اتصل بالإنترنت مرة واحدة لتجديدها');
-        return;
-      }
-      showScreen('s-home');
-      await loadHomeData();
-      updateSubscriptionUI();
-      monitorConnection();
-      if (navigator.onLine) setTimeout(doSync, 1500);
-      // فحص التغييرات المعلقة كل 30 دقيقة
-      checkLongPending();
-      setInterval(checkLongPending, 30 * 60 * 1000);
-    } catch(e) {
-      localStorage.removeItem('dd_session');
-      localStorage.removeItem('session');
+
+  // لا توجد جلسة محفوظة
+  if (!saved) {
+    showScreen('s-login');
+    return;
+  }
+
+  try {
+    SESSION = JSON.parse(saved);
+    CUR  = SESSION.currency || '₪';
+    PLAN = SESSION.plan || null;
+
+    // فحص انتهاء الجلسة 30 يوم بدون نت
+    const savedAt = SESSION.saved_at || Date.now();
+    const days30  = 30 * 24 * 3600 * 1000;
+    if (Date.now() - savedAt > days30 && !navigator.onLine) {
+      showScreen('s-login');
+      showErr(document.getElementById('login-err'),
+        'انتهت الجلسة — اتصل بالإنترنت مرة واحدة لتجديدها');
+      return;
     }
+
+    // فحص الاتفاقية والإعداد
+    const localAgreed  = localStorage.getItem('terms_agreed');
+    const localOnboard = localStorage.getItem('onboarding_done');
+
+    if (!SESSION.agreed_to_terms && !localAgreed) {
+      showScreen('s-terms');
+      return;
+    }
+    if (!SESSION.onboarding_done && !localOnboard) {
+      showScreen('s-setup-shop');
+      const waEl = document.getElementById('setup-wa');
+      if (SESSION.phone && waEl) waEl.value = SESSION.phone;
+      setStoreLogo(SESSION.store_logo || '🏪');
+      return;
+    }
+
+    showScreen('s-home');
+    await loadHomeData();
+    updateSubscriptionUI();
+    monitorConnection();
+    if (navigator.onLine) setTimeout(doSync, 1500);
+    checkLongPending();
+    setInterval(checkLongPending, 30 * 60 * 1000);
+
+  } catch(e) {
+    console.warn('init error', e);
+    localStorage.removeItem('dd_session');
+    localStorage.removeItem('session');
+    showScreen('s-login');
   }
 }
 
@@ -1812,7 +1835,9 @@ function showErr(el, msg) {
 function doLogout() {
   if (confirm('تأكيد تسجيل الخروج؟ ستبقى البيانات على الجهاز')) {
     localStorage.removeItem('session');
+    localStorage.removeItem('dd_session');
     SESSION = null;
+    PLAN = null;
     showScreen('s-login');
   }
 }
