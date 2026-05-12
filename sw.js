@@ -1,4 +1,4 @@
-const V = 'dd-v5';
+const V = 'dd-v6';
 const APP_SHELL = [
   '/DaftarEldayen/',
   '/DaftarEldayen/index.html',
@@ -9,14 +9,18 @@ const APP_SHELL = [
 self.addEventListener('install', e => {
   self.skipWaiting();
   e.waitUntil(
-    caches.open(V).then(c => c.addAll(APP_SHELL).catch(() => {}))
+    caches.open(V).then(c =>
+      Promise.all(APP_SHELL.map(url => c.add(url).catch(() => {})))
+    )
   );
 });
 
 self.addEventListener('activate', e => {
   e.waitUntil(
     caches.keys()
-      .then(keys => Promise.all(keys.filter(k => k !== V).map(k => caches.delete(k))))
+      .then(keys => Promise.all(
+        keys.filter(k => k !== V).map(k => caches.delete(k))
+      ))
       .then(() => self.clients.claim())
   );
 });
@@ -27,17 +31,21 @@ self.addEventListener('fetch', e => {
 
   if (url.hostname === 'khaled-finance2026.github.io') {
     e.respondWith(
-      caches.match(e.request).then(cached => {
+      caches.match(e.request).then(async cached => {
         if (cached) {
           fetch(e.request).then(r => {
-            if (r.ok) caches.open(V).then(c => c.put(e.request, r));
+            if (r.ok) caches.open(V).then(c => c.put(e.request, r.clone()));
           }).catch(() => {});
           return cached;
         }
-        return fetch(e.request).then(r => {
+        try {
+          const r = await fetch(e.request);
           if (r.ok) caches.open(V).then(c => c.put(e.request, r.clone()));
           return r;
-        });
+        } catch {
+          const fallback = await caches.match('/DaftarEldayen/index.html');
+          return fallback || new Response('لا يوجد اتصال', {status: 503});
+        }
       })
     );
     return;
