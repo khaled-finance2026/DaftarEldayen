@@ -47,10 +47,20 @@ function onCountryChange() {
 }
 
 function acceptTermsAndSetup() {
+  const chk = document.getElementById('terms-agree');
+  if (chk && !chk.checked) {
+    chk.closest('label').style.border = '2px solid var(--red)';
+    chk.closest('label').style.borderRadius = '10px';
+    chk.closest('label').style.padding = '8px';
+    setTimeout(() => {
+      chk.closest('label').style.border = '';
+      chk.closest('label').style.padding = '';
+    }, 2000);
+    return;
+  }
   // حفظ الموافقة محلياً
   localStorage.setItem('terms_agreed', Date.now().toString());
   showScreen('s-setup-shop');
-  // تعبئة الرقم كواتساب افتراضياً
   if (SESSION?.phone) {
     document.getElementById('setup-wa').value = SESSION.phone;
   }
