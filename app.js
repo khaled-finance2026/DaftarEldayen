@@ -3488,7 +3488,42 @@ function toggleAIMic() {
   aiRecognition.onend = () => aiStopMic();
   aiRecognition.start();
 }
+function startAIMic(e) {
+  if (e) e.preventDefault();
+  const supported = 'webkitSpeechRecognition' in window
+                 || 'SpeechRecognition' in window;
+  if (!supported) {
+    document.getElementById('aiMicTxt').textContent = 'استخدم Chrome';
+    return;
+  }
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  aiRecognition = new SR();
+  aiRecognition.lang = 'ar-SA';
+  aiRecognition.interimResults = true;
+  aiRecognition.continuous = true;
+  aiRecognition.onstart = () => {
+    aiListening = true;
+    document.getElementById('aiMicBtn').classList.add('mic-on');
+    document.getElementById('aiMicTxt').textContent = 'يسمع...';
+    document.getElementById('aiInput').value = '';
+  };
+  aiRecognition.onresult = (e) => {
+    let t = '';
+    for (let i = 0; i < e.results.length; i++)
+      t += e.results[i][0].transcript;
+    document.getElementById('aiInput').value = t;
+  };
+  aiRecognition.onerror = () => aiStopMic();
+  aiRecognition.onend   = () => aiStopMic();
+  aiRecognition.start();
+}
 
+function stopAIMic() {
+  if (aiRecognition) aiRecognition.stop();
+  aiStopMic();
+  const txt = document.getElementById('aiInput').value.trim();
+  if (txt) setTimeout(() => sendAI(), 300);
+}
 function aiStopMic() {
   aiListening = false;
   document.getElementById('aiMicBtn').classList.remove('mic-on');
