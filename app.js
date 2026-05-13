@@ -2865,15 +2865,17 @@ async function devLogin() {
         currency:        d.currency || '₪',
         country_code:    d.country_code || 'PS',
         store_logo:      d.store_logo || '🛠️',
-        onboarding_done: d.onboarding_done,
-        agreed_to_terms: d.agreed_to_terms,
+        onboarding_done: true,
+        agreed_to_terms: true,
         phone:           '+970591234567',
         saved_at:        Date.now()
       };
       CUR = SESSION.currency;
       PLAN = d.plan_info || null;
-      localStorage.setItem('dd_session', JSON.stringify(SESSION));
-      localStorage.setItem('session',    JSON.stringify(SESSION));
+      localStorage.setItem('dd_session',      JSON.stringify(SESSION));
+      localStorage.setItem('session',         JSON.stringify(SESSION));
+      localStorage.setItem('onboarding_done', '1');
+      localStorage.setItem('terms_agreed',    Date.now().toString());
       await pullFromServer();
       showScreen('s-home');
       await loadHomeData();
