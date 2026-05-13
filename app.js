@@ -466,16 +466,17 @@ function showUpgradeModal() {
           📝 أكمل بياناتك ثم اشترك
         </button>`;
       } else {
-        return \`<a href="https://wa.me/970591234567?text=أريد الاشتراك في دفتر الدين — \${encodeURIComponent(SESSION?.shop_name||'تاجر')}" target="_blank"
+        const shopName = encodeURIComponent(SESSION?.shop_name||'تاجر');
+        return `<a href="https://wa.me/970591234567?text=أريد الاشتراك — ${shopName}" target="_blank"
           style="display:block;text-align:center;padding:14px;background:linear-gradient(135deg,#065f46,#10b981);
           border-radius:12px;color:#fff;font-size:16px;font-weight:800;text-decoration:none;margin-bottom:8px">
           📲 اشترك الآن عبر واتساب
-        </a>\`;
+        </a>`;
       }
     })()}
     <div style="text-align:center;font-size:12px;color:var(--txt3);margin-top:8px">
       14 يوم تجريبي مجاني عند الاشتراك لأول مرة
-    </div>\`;
+    </div>`;
   openModal('m-contact');
 }
 
@@ -777,7 +778,6 @@ const UNITS_LIST = ['كيلو','غرام','علبة','كرتون','كيس','قط
 // إدارة مودال الفاتورة الجديد
 // ================================================================
 let invType = 'normal'; // normal | tax
-let invRows = [];
 
 function openInvoiceModal() {
   const custName = document.getElementById('add-cust-search')?.value || '';
@@ -1172,6 +1172,23 @@ async function init() {
     showScreen('s-login');
     return;
   }
+  // تخصيص شاشة الدخول بمعلومات المتجر المحفوظة
+  try {
+    const s = JSON.parse(saved);
+    if (s?.store_logo || s?.shop_name) {
+      const iconEl = document.querySelector('.login-logo .icon');
+      const nameEl = document.querySelector('.login-logo h1');
+      if (iconEl && s.store_logo) {
+        if (s.store_logo.startsWith('data:')) {
+          iconEl.innerHTML = `<img src="${s.store_logo}"
+            style="height:60px;width:60px;object-fit:contain;border-radius:12px">`;
+        } else {
+          iconEl.textContent = s.store_logo;
+        }
+      }
+      if (nameEl && s.shop_name) nameEl.textContent = s.shop_name;
+    }
+  } catch(e) {}
 
   try {
     SESSION = JSON.parse(saved);
@@ -2749,20 +2766,6 @@ function cancelNewCust() {
 }
 
 
-  if (!SESSION) return;
-  const custs = await db.customers.where('merchant_id').equals(SESSION.merchant_id).toArray();
-  const sel   = document.getElementById('add-cust');
-  sel.innerHTML = '<option value="">اختر زبوناً...</option>' +
-    custs.map(c => `<option value="${c.id}" data-phone="${c.phone||''}">${c.name}</option>`).join('');
-
-  sel.onchange = () => {
-    const opt = sel.options[sel.selectedIndex];
-    const phone = opt?.dataset?.phone || '';
-    document.getElementById('add-phone').value = phone;
-    document.getElementById('phone-warn-row').style.display = phone ? 'none' : (sel.value ? 'block' : 'none');
-  };
-}
-
 // ================================================================
 // التبويبات
 // ================================================================
@@ -2841,6 +2844,46 @@ function doLogout() {
     SESSION = null;
     PLAN = null;
     showScreen('s-login');
+  }
+}
+
+// دخول مطور مباشر — للاختبار فقط
+async function devLogin() {
+  try {
+    const res = await fetch(LOGIN_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ action: 'login', phone: '+970591234567', pin: '1234' })
+    });
+    const d = await res.json();
+    if (d.ok) {
+      SESSION = {
+        merchant_id:     d.merchant_id,
+        token:           d.token,
+        name:            d.name || 'المطور',
+        shop_name:       d.shop_name || 'حساب المطور',
+        currency:        d.currency || '₪',
+        country_code:    d.country_code || 'PS',
+        store_logo:      d.store_logo || '🛠️',
+        onboarding_done: d.onboarding_done,
+        agreed_to_terms: d.agreed_to_terms,
+        phone:           '+970591234567',
+        saved_at:        Date.now()
+      };
+      CUR = SESSION.currency;
+      PLAN = d.plan_info || null;
+      localStorage.setItem('dd_session', JSON.stringify(SESSION));
+      localStorage.setItem('session',    JSON.stringify(SESSION));
+      await pullFromServer();
+      showScreen('s-home');
+      await loadHomeData();
+      updateSubscriptionUI();
+      monitorConnection();
+    } else {
+      alert('فشل دخول المطور: ' + (d.error||'خطأ'));
+    }
+  } catch(e) {
+    alert('لا يوجد اتصال');
   }
 }
 

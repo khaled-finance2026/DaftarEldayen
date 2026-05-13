@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no">
 <meta name="theme-color" content="#0f172a">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<title>دفتر الدين</title>
+<title>المبيعات</title>
 
 <!-- Dexie.js للتخزين المحلي -->
 <script>
@@ -528,8 +528,14 @@ select.fi option{
   <div class="login-card">
     <div class="login-logo">
       <div class="icon">📒</div>
-      <h1>دفتر الدين</h1>
+      <h1>المبيعات</h1>
       <p>معاملات الزبائن</p>
+      <div style="margin-top:8px;background:rgba(59,130,246,.15);
+        border-radius:8px;padding:4px 14px;display:inline-block">
+        <span style="font-size:13px;font-weight:900;color:var(--pri)">
+          v12.0
+        </span>
+      </div>
     </div>
     <div id="login-err" class="err"></div>
     <div class="fg">
@@ -565,6 +571,15 @@ select.fi option{
         نسيت الرقم السري
       </button>
     </div>
+    <!-- زر المطور — مؤقت -->
+    <div style="text-align:center;margin-top:20px">
+      <button onclick="devLogin()"
+        style="background:none;border:1px dashed rgba(100,116,139,.3);
+        border-radius:8px;color:var(--txt3);font-size:12px;
+        cursor:pointer;padding:6px 14px;opacity:.5">
+        🛠️ دخول المطور
+      </button>
+    </div>
   </div>
 </div>
 
@@ -581,7 +596,7 @@ select.fi option{
       <div style="background:var(--bg2);border-radius:14px;padding:18px;margin-bottom:14px;border:1.5px solid var(--brd)">
         <h3 style="font-size:16px;font-weight:800;color:var(--pri);margin-bottom:10px">📱 طبيعة الخدمة</h3>
         <p style="font-size:14px;color:var(--txt2);line-height:1.8">
-          <b>دفتر الدين</b> هو أداة تسجيل بيانات إلكترونية فحسب — يسجّل ما تُدخله ولا يُضيف إليه ولا يُصادق عليه. المسؤولية الكاملة عن دقة البيانات تقع عليك.
+          <b>المبيعات</b> هو أداة تسجيل بيانات إلكترونية فحسب — يسجّل ما تُدخله ولا يُضيف إليه ولا يُصادق عليه. المسؤولية الكاملة عن دقة البيانات تقع عليك.
         </p>
       </div>
 
@@ -800,7 +815,7 @@ select.fi option{
   <div class="topnav" style="justify-content:center;position:relative">
     <div id="shop-logo-top" style="position:absolute;right:16px;
       font-size:26px;line-height:1"></div>
-    <h2 id="shop-name" style="text-align:center">دفتر الدين</h2>
+    <h2 id="shop-name" style="text-align:center">المبيعات</h2>
   </div>
   <div class="content" style="position:relative">
     <div id="logo-watermark" style="position:fixed;bottom:80px;left:50%;
@@ -989,7 +1004,7 @@ select.fi option{
   <!-- رأس الصفحة: شعار + اسم المتجر -->
   <div class="topnav" style="justify-content:center;position:relative">
     <div id="rep-shop-logo" style="position:absolute;right:16px;font-size:26px;line-height:1"></div>
-    <h2 id="rep-shop-name" style="text-align:center">دفتر الدين</h2>
+    <h2 id="rep-shop-name" style="text-align:center">المبيعات</h2>
   </div>
 
   <!-- تبويبان: يومي / إجماليات -->
@@ -1093,7 +1108,7 @@ select.fi option{
       </div>
 
       <!-- واتساب -->
-      <a href="https://wa.me/970591234567?text=مرحباً، أنا تاجر في دفتر الدين وأحتاج مساعدة"
+      <a href="https://wa.me/970591234567?text=مرحباً، أنا تاجر في المبيعات وأحتاج مساعدة"
         target="_blank" style="display:flex;align-items:center;gap:14px;
         background:rgba(37,211,102,.12);border:1.5px solid rgba(37,211,102,.3);
         border-radius:12px;padding:14px;margin-bottom:10px;text-decoration:none">
@@ -1105,7 +1120,7 @@ select.fi option{
       </a>
 
       <!-- بريد إلكتروني -->
-      <a href="mailto:support@tahseel.app?subject=طلب دعم - دفتر الدين"
+      <a href="mailto:support@tahseel.app?subject=طلب دعم - المبيعات"
         target="_blank" style="display:flex;align-items:center;gap:14px;
         background:rgba(59,130,246,.1);border:1.5px solid rgba(59,130,246,.25);
         border-radius:12px;padding:14px;margin-bottom:10px;text-decoration:none">
