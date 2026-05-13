@@ -3458,7 +3458,7 @@ function toggleAIMic() {
 
   const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
   aiRecognition = new SR();
-  aiRecognition.lang = 'ar-PS';
+  aiRecognition.lang = 'ar-SA';
   aiRecognition.interimResults = true;
   aiRecognition.continuous = false;
 
