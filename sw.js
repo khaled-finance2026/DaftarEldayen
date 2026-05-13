@@ -40,7 +40,8 @@ self.addEventListener('fetch', e => {
         }
         try {
           const r = await fetch(e.request);
-          if (r.ok) caches.open(V).then(c => c.put(e.request, r.clone()));
+          const rClone = r.clone();
+          if (r.ok) caches.open(V).then(c => c.put(e.request, rClone));
           return r;
         } catch {
           const fallback = await caches.match('/DaftarEldayen/index.html');
