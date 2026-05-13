@@ -214,7 +214,39 @@ html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--txt);
 .bnt .ic{font-size:26px}
 .bnt.active{color:var(--pri)}
 
-/* ===== CARDS ===== */
+/* ===== INVOICE MODAL ===== */
+#m-inv-modal{position:fixed;inset:0;z-index:300;display:none;flex-direction:column}
+#m-inv-modal.open{display:flex}
+.inv-overlay{position:absolute;inset:0;background:rgba(0,0,0,.5)}
+.inv-sheet{position:relative;margin-top:auto;background:var(--bg);
+  border-radius:20px 20px 0 0;height:92vh;display:flex;flex-direction:column;
+  overflow:hidden}
+.inv-sheet-head{padding:14px 18px;border-bottom:2px solid var(--brd);
+  display:flex;align-items:center;justify-content:space-between;flex-shrink:0;
+  background:linear-gradient(135deg,#1e3a8a,#2563eb);color:#fff}
+.inv-sheet-body{flex:1;overflow-y:auto;padding:16px}
+.inv-sheet-foot{padding:12px 16px;border-top:2px solid var(--brd);
+  background:var(--bg);flex-shrink:0}
+.inv-type-toggle{display:flex;background:rgba(255,255,255,.15);
+  border-radius:10px;padding:3px;gap:3px}
+.inv-type-btn{flex:1;padding:7px 12px;border:none;border-radius:8px;
+  font-size:14px;font-weight:800;cursor:pointer;transition:all .2s;
+  background:transparent;color:rgba(255,255,255,.7)}
+.inv-type-btn.active{background:#fff;color:#1e3a8a}
+.inv-row-card{background:var(--bg2);border:1.5px solid var(--brd);
+  border-radius:12px;padding:12px;margin-bottom:10px;position:relative}
+.inv-field{width:100%;padding:9px 12px;border:1.5px solid var(--brd);
+  border-radius:9px;background:var(--bg);color:var(--txt);
+  font-size:16px;font-family:inherit;outline:none;direction:rtl}
+.inv-field:focus{border-color:var(--pri);box-shadow:0 0 0 3px rgba(59,130,246,.15)}
+.inv-num{font-family:'Courier New',monospace;font-size:17px;direction:ltr;
+  text-align:left}
+.unit-chips{display:flex;flex-wrap:wrap;gap:5px;margin-top:6px}
+.unit-chip{padding:5px 11px;border:1.5px solid var(--brd);border-radius:16px;
+  background:var(--bg3);color:var(--txt2);font-size:13px;font-weight:700;cursor:pointer}
+.unit-chip.active{background:var(--pri);color:#fff;border-color:var(--pri)}
+
+/* ===== CARDS =====  */
 .stat-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;padding:16px 16px 8px}
 .stat-card{background:var(--bg2);border:2px solid var(--brd);
   border-radius:14px;padding:18px 14px;text-align:center}
@@ -564,7 +596,7 @@ select.fi option{
         <h3 style="font-size:16px;font-weight:800;color:var(--red);margin-bottom:10px">🚫 المحظورات</h3>
         <ul style="font-size:14px;color:var(--txt2);line-height:2;padding-right:18px">
           <li>تسجيل بيانات مزيّفة أو ديون غير حقيقية</li>
-          <li>استخدام التطبيق لمضايقة العملاء أو الإضرار بهم</li>
+          <li>استخدام التطبيق لمضايقة الزبائن أو الإضرار بهم</li>
           <li>محاولة اختراق النظام أو التلاعب بالبيانات</li>
         </ul>
       </div>
@@ -620,9 +652,52 @@ select.fi option{
     <div style="padding:20px">
       <div id="setup-err" class="err" style="display:none"></div>
 
-      <!-- شعار المتجر — اختيار Emoji -->
+      <!-- 1: اسم صاحب المتجر -->
       <div class="fg">
-        <label style="font-size:15px">شعار المتجر (اختر رمزاً)</label>
+        <label>اسمك (صاحب المتجر) <span style="color:var(--red)">*</span></label>
+        <input type="text" id="setup-owner" class="fi" placeholder="اسمك الكامل" maxlength="50">
+      </div>
+      <!-- 2: اسم المتجر -->
+      <div class="fg">
+        <label>اسم المتجر <span style="color:var(--red)">*</span></label>
+        <input type="text" id="setup-shop" class="fi" placeholder="مثال: دكان أبو محمد" maxlength="50">
+      </div>
+      <!-- 3: نوع المتجر -->
+      <div class="fg">
+        <label>نوع المتجر</label>
+        <select id="setup-type" class="fi" onchange="onTypeChange()">
+          <option>بقالة</option>
+          <option>خضروات وفاكهة</option>
+          <option>لحوم ودواجن</option>
+          <option>مخبز وحلويات</option>
+          <option>أدوية وصيدلية</option>
+          <option>أدوات ومواد بناء</option>
+          <option>ملابس وأقمشة</option>
+          <option>إلكترونيات</option>
+          <option>مطعم أو مقهى</option>
+          <option>خدمات</option>
+          <option>أخرى</option>
+        </select>
+      </div>
+      <!-- 4: شعار المتجر -->
+      <div class="fg">
+        <label style="font-size:15px">شعار المتجر الخاص (للفواتير الرسمية)</label>
+        <label for="setup-logo-file"
+          style="display:flex;align-items:center;gap:10px;padding:12px 16px;
+          border:2px dashed rgba(59,130,246,.4);border-radius:12px;cursor:pointer;
+          background:rgba(59,130,246,.05);margin-bottom:10px">
+          <span style="font-size:24px">🖼</span>
+          <div style="flex:1">
+            <div style="font-size:15px;font-weight:700;color:var(--pri)">ارفع شعارك</div>
+            <div style="font-size:12px;color:var(--txt3)">PNG أو JPG — بحد أقصى 500KB</div>
+          </div>
+          <div id="logo-img-preview"></div>
+        </label>
+        <input type="file" id="setup-logo-file" accept="image/*"
+          style="display:none" onchange="handleLogoUpload(this)">
+      </div>
+      <div class="fg">
+        <label style="font-size:15px">أو اختر رمزاً بديلاً</label>
         <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-top:8px">
           <button onclick="setStoreLogo('🏪')" id="logo-s1" class="logo-btn">🏪</button>
           <button onclick="setStoreLogo('🛒')" id="logo-s2" class="logo-btn">🛒</button>
@@ -638,61 +713,50 @@ select.fi option{
           <button onclick="setStoreLogo('🎁')" id="logo-s12" class="logo-btn">🎁</button>
         </div>
       </div>
-
-      <div class="fg">
-        <label>اسم المتجر <span style="color:var(--red)">*</span></label>
-        <input type="text" id="setup-shop" class="fi" placeholder="مثال: دكان أبو محمد" maxlength="50">
-      </div>
-      <div class="fg">
-        <label>اسمك (صاحب المتجر) <span style="color:var(--red)">*</span></label>
-        <input type="text" id="setup-owner" class="fi" placeholder="اسمك الكامل" maxlength="50">
-      </div>
-      <div class="fg">
-        <label>نوع المتجر</label>
-        <select id="setup-type" class="fi">
-          <option>بقالة</option>
-          <option>خضروات وفاكهة</option>
-          <option>لحوم ودواجن</option>
-          <option>مخبز وحلويات</option>
-          <option>أدوية وصيدلية</option>
-          <option>أدوات ومواد بناء</option>
-          <option>ملابس وأقمشة</option>
-          <option>إلكترونيات</option>
-          <option>مطعم أو مقهى</option>
-          <option>خدمات</option>
-          <option>أخرى</option>
-        </select>
-      </div>
       <div class="fg">
         <label>البلد <span style="color:var(--red)">*</span></label>
         <select id="setup-country" class="fi" onchange="onCountryChange()">
-          <option value="PS" data-sym="₪">فلسطين — ₪ شيكل</option>
-          <option value="JO" data-sym="د.أ">الأردن — د.أ دينار</option>
-          <option value="SA" data-sym="ر.س">السعودية — ر.س ريال</option>
-          <option value="EG" data-sym="ج.م">مصر — ج.م جنيه</option>
-          <option value="AE" data-sym="د.إ">الإمارات — د.إ درهم</option>
-          <option value="SY" data-sym="ل.س">سوريا — ل.س ليرة</option>
-          <option value="IQ" data-sym="د.ع">العراق — د.ع دينار</option>
-          <option value="LB" data-sym="ل.ل">لبنان — ل.ل ليرة</option>
-          <option value="KW" data-sym="د.ك">الكويت — د.ك دينار</option>
-          <option value="MA" data-sym="د.م">المغرب — د.م درهم</option>
-          <option value="TN" data-sym="د.ت">تونس — د.ت دينار</option>
-          <option value="DZ" data-sym="د.ج">الجزائر — د.ج دينار</option>
-          <option value="LY" data-sym="د.ل">ليبيا — د.ل دينار</option>
-          <option value="YE" data-sym="ر.ي">اليمن — ر.ي ريال</option>
-          <option value="SD" data-sym="ج.س">السودان — ج.س جنيه</option>
-          <option value="QA" data-sym="ر.ق">قطر — ر.ق ريال</option>
-          <option value="BH" data-sym="د.ب">البحرين — د.ب دينار</option>
-          <option value="OM" data-sym="ر.ع">عُمان — ر.ع ريال</option>
+          <option value="" disabled selected style="display:none">اختر البلد...</option>
+          <option value="PS" data-sym="₪">🇵🇸 فلسطين — ₪ شيكل</option>
+          <option value="JO" data-sym="د.أ">🇯🇴 الأردن — د.أ دينار</option>
+          <option value="SA" data-sym="ر.س">🇸🇦 السعودية — ر.س ريال</option>
+          <option value="EG" data-sym="ج.م">🇪🇬 مصر — ج.م جنيه</option>
+          <option value="AE" data-sym="د.إ">🇦🇪 الإمارات — د.إ درهم</option>
+          <option value="SY" data-sym="ل.س">🇸🇾 سوريا — ل.س ليرة</option>
+          <option value="IQ" data-sym="د.ع">🇮🇶 العراق — د.ع دينار</option>
+          <option value="LB" data-sym="ل.ل">🇱🇧 لبنان — ل.ل ليرة</option>
+          <option value="KW" data-sym="د.ك">🇰🇼 الكويت — د.ك دينار</option>
+          <option value="MA" data-sym="د.م">🇲🇦 المغرب — د.م درهم</option>
+          <option value="TN" data-sym="د.ت">🇹🇳 تونس — د.ت دينار</option>
+          <option value="DZ" data-sym="د.ج">🇩🇿 الجزائر — د.ج دينار</option>
+          <option value="LY" data-sym="د.ل">🇱🇾 ليبيا — د.ل دينار</option>
+          <option value="YE" data-sym="ر.ي">🇾🇪 اليمن — ر.ي ريال</option>
+          <option value="SD" data-sym="ج.س">🇸🇩 السودان — ج.س جنيه</option>
+          <option value="QA" data-sym="ر.ق">🇶🇦 قطر — ر.ق ريال</option>
+          <option value="BH" data-sym="د.ب">🇧🇭 البحرين — د.ب دينار</option>
+          <option value="OM" data-sym="ر.ع">🇴🇲 عُمان — ر.ع ريال</option>
         </select>
+        <div id="currency-hint"
+          style="margin-top:8px;display:none;background:rgba(59,130,246,.08);
+          border:1.5px solid rgba(59,130,246,.25);border-radius:10px;
+          padding:10px 14px;display:flex;align-items:center;gap:10px">
+          <span id="currency-sym"
+            style="font-size:22px;font-weight:900;color:var(--pri)"></span>
+          <span id="currency-name"
+            style="font-size:14px;color:var(--txt2)"></span>
+        </div>
       </div>
       <div class="fg">
         <label>المدينة</label>
         <input type="text" id="setup-city" class="fi" placeholder="مثال: نابلس، رام الله...">
       </div>
       <div class="fg">
-        <label>رقم الواتساب <span style="color:var(--txt3);font-size:12px">(اختياري)</span></label>
-        <input type="tel" id="setup-wa" class="fi fi-phone" placeholder="نفس رقم الدخول أو رقم آخر" dir="ltr">
+        <label>رقم الهاتف <span style="color:var(--red);font-size:12px">*</span></label>
+        <input type="tel" id="setup-wa" class="fi fi-phone" placeholder="+970XXXXXXXXX" dir="ltr">
+      </div>
+      <div class="fg">
+        <label>رقم الواتساب <span style="color:var(--txt3);font-size:12px">(اختياري — إن كان مختلفاً)</span></label>
+        <input type="tel" id="setup-whatsapp" class="fi fi-phone" placeholder="+970XXXXXXXXX" dir="ltr">
       </div>
       <div class="fg">
         <label>البريد الإلكتروني <span style="color:var(--txt3);font-size:12px">(اختياري)</span></label>
@@ -711,60 +775,83 @@ select.fi option{
   </div>
 </div>
 <div class="screen" id="s-home">
-  <div class="sync-bar" id="sync-bar">
+  <!-- السطر الأول: حالة المزامنة — للمشتركين فقط -->
+  <div class="sync-bar" id="sync-bar" style="display:none">
     <span id="sync-txt">جاري...</span>
-    <button class="sync-btn" onclick="doSync()">ترحيل إلى الإنترنت</button>
   </div>
+
+  <!-- السطر الثاني: شريط الحالة — سطر كامل قابل للضغط مرتين -->
+  <div id="status-bar" style="display:none"></div>
 
   <!-- شريط الترقية للمجانيين -->
   <div id="upgrade-banner" style="display:none;background:linear-gradient(135deg,#1e3a8a,#2563eb);
-    padding:12px 16px;display:none;align-items:center;gap:12px;justify-content:space-between">
+    padding:10px 16px;align-items:center;gap:12px;justify-content:space-between">
     <div style="font-size:13px;color:rgba(255,255,255,.85);flex:1;line-height:1.5">
       🔒 بياناتك محلية فقط — اشترك للنسخ السحابي
     </div>
     <button onclick="showUpgradeModal()"
-      style="padding:8px 16px;background:#fff;color:#1e3a8a;border:none;
+      style="padding:7px 14px;background:#fff;color:#1e3a8a;border:none;
       border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0">
       ارقِّ الآن
     </button>
   </div>
 
-  <div class="topnav">
-    <h2 id="shop-name">دفتر الدين</h2>
-    <button class="icon-btn" onclick="showScreen('s-settings')">⚙️</button>
+  <!-- الشريط العلوي: شعار + اسم المتجر في المنتصف -->
+  <div class="topnav" style="justify-content:center;position:relative">
+    <div id="shop-logo-top" style="position:absolute;right:16px;
+      font-size:26px;line-height:1"></div>
+    <h2 id="shop-name" style="text-align:center">دفتر الدين</h2>
   </div>
-  <div class="content">
+  <div class="content" style="position:relative">
+    <div id="logo-watermark" style="position:fixed;bottom:80px;left:50%;
+      transform:translateX(-50%);opacity:0.04;pointer-events:none;
+      font-size:120px;z-index:0;user-select:none"></div>
     <div class="stat-row" id="home-stats"></div>
     <div style="padding:0 16px 8px;font-size:13px;font-weight:700;color:var(--txt2)">
       آخر الديون
     </div>
     <div id="home-txlist"></div>
   </div>
+  <!-- زر الإضافة السريعة العائم -->
+  <button onclick="openQuickAdd()"
+    style="position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
+    width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);
+    border:none;color:#fff;font-size:28px;cursor:pointer;
+    box-shadow:0 4px 20px rgba(124,58,237,.5);z-index:50;
+    display:flex;align-items:center;justify-content:center;
+    transition:transform .15s" id="fab-btn"
+    onmousedown="this.style.transform='translateX(-50%) scale(.92)'"
+    onmouseup="this.style.transform='translateX(-50%) scale(1)'">
+    ⚡
+  </button>
   <div class="botnav">
     <button class="bnt active" onclick="showTab('home')" id="tab-home">
       <span class="ic">🏠</span>الرئيسية
     </button>
     <button class="bnt" onclick="showTab('customers')" id="tab-customers">
-      <span class="ic">👥</span>العملاء
+      <span class="ic">👥</span>الزبائن
     </button>
     <button class="bnt" onclick="showTab('add')" id="tab-add">
-      <span class="ic">➕</span>إضافة دين
+      <span class="ic">➕</span>إضافة معاملة
     </button>
     <button class="bnt" onclick="showTab('reports')" id="tab-reports">
       <span class="ic">📊</span>تقارير
     </button>
+    <button class="bnt" onclick="showScreen('s-settings')" id="tab-settings">
+      <span class="ic">⚙️</span>الإعدادات
+    </button>
   </div>
 </div>
 
-<!-- ===== شاشة العملاء ===== -->
+<!-- ===== شاشة الزبائن ===== -->
 <div class="screen" id="s-customers">
   <div class="topnav">
-    <h2>العملاء</h2>
+    <h2>الزبائن</h2>
     <button class="icon-btn" onclick="openModal('m-addcust')">➕</button>
   </div>
   <div class="search-bar">
     <input type="search" class="search-in" id="cust-search"
-      placeholder="🔍 ابحث عن عميل..." oninput="filterCustomers(this.value)">
+      placeholder="🔍 ابحث عن زبون..." oninput="filterCustomers(this.value)">
   </div>
   <!-- شريط الفرز -->
   <div class="sort-bar" id="sort-bar">
@@ -781,10 +868,10 @@ select.fi option{
       <span class="ic">🏠</span>الرئيسية
     </button>
     <button class="bnt active" onclick="showTab('customers')" id="tab-customers2">
-      <span class="ic">👥</span>العملاء
+      <span class="ic">👥</span>الزبائن
     </button>
     <button class="bnt" onclick="showTab('add')" id="tab-add2">
-      <span class="ic">➕</span>إضافة دين
+      <span class="ic">➕</span>إضافة معاملة
     </button>
     <button class="bnt" onclick="showTab('reports')" id="tab-reports2">
       <span class="ic">📊</span>تقارير
@@ -792,23 +879,55 @@ select.fi option{
   </div>
 </div>
 
-<!-- ===== شاشة إضافة دين ===== -->
+<!-- ===== شاشة إضافة معاملة ===== -->
 <div class="screen" id="s-add">
   <div class="topnav">
-    <h2>إضافة دين جديد</h2>
+    <h2>إضافة معاملة جديدة</h2>
   </div>
   <div class="content" style="padding:16px">
     <div id="add-err" class="err"></div>
+    <div id="add-recent" style="margin-bottom:10px"></div>
     <div class="fg">
-      <label>العميل <span style="color:var(--red)">*</span></label>
-      <select id="add-cust" class="fi">
-        <option value="">اختر عميلاً...</option>
-      </select>
+      <label>الزبون <span style="color:var(--red)">*</span></label>
+      <div style="position:relative">
+        <input type="text" id="add-cust-search" class="fi"
+          placeholder="ادخل اسم الزبون..."
+          autocomplete="off"
+          oninput="filterCustSearch(this.value)"
+          onfocus="filterCustSearch(this.value)"
+          onblur="setTimeout(()=>hideCustDropdown(),200)">
+        <input type="hidden" id="add-cust" value="">
+        <div id="cust-dropdown" style="display:none;position:absolute;top:100%;right:0;left:0;
+          background:var(--bg2);border:2px solid var(--brd);border-radius:0 0 12px 12px;
+          z-index:100;max-height:220px;overflow-y:auto;box-shadow:0 8px 24px rgba(0,0,0,.2)">
+        </div>
+      </div>
+    </div>
+    <div id="new-cust-confirm" style="display:none;background:rgba(251,191,36,.12);
+      border:2px solid rgba(251,191,36,.4);border-radius:12px;padding:14px;margin-bottom:8px">
+      <div style="font-size:15px;font-weight:800;color:#92400e;margin-bottom:10px">
+        ⚠️ هذا الاسم غير موجود — هل هو زبون جديد؟
+      </div>
+      <div style="font-size:13px;color:var(--txt2);margin-bottom:12px;line-height:1.6">
+        تأكد أنه ليس زبوناً موجوداً بأسم مختلف قبل الإضافة.
+      </div>
+      <div style="display:flex;gap:10px">
+        <button onclick="confirmNewCust()"
+          style="flex:1;padding:11px;background:linear-gradient(135deg,#065f46,#10b981);
+          color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:800;cursor:pointer">
+          ✅ نعم، أضفه جديداً
+        </button>
+        <button onclick="cancelNewCust()"
+          style="flex:1;padding:11px;background:var(--bg3);color:var(--txt);
+          border:none;border-radius:10px;font-size:15px;font-weight:700;cursor:pointer">
+          ↩ تراجع
+        </button>
+      </div>
     </div>
     <div class="fg" id="phone-warn-row" style="display:none">
       <div style="background:rgba(251,191,36,.1);border:1px solid rgba(251,191,36,.3);
         border-radius:8px;padding:10px;font-size:13px;color:var(--yel)">
-        ⚠️ هذا العميل لا يوجد لديه رقم هاتف
+        ⚠️ هذا الزبون لا يوجد لديه رقم هاتف
       </div>
     </div>
     <div class="fg">
@@ -817,41 +936,40 @@ select.fi option{
     </div>
     <div class="fg">
       <label>المبلغ <span style="color:var(--red)">*</span></label>
-      <input type="number" id="add-amount" class="fi" placeholder="0" min="1" step="0.01">
+      <input type="number" id="add-amount" class="fi" placeholder="0" min="1" step="0.01"
+        style="font-size:22px;font-weight:900;text-align:center">
+      <div id="amount-chips"
+        style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center">
+      </div>
     </div>
     <div class="fg">
-      <label>البيان</label>
-      <input type="text" id="add-desc" class="fi" placeholder="بضاعة، خدمة...">
+      <label>البيان <span style="font-size:12px;color:var(--txt3)">(اختياري)</span></label>
+      <input type="text" id="add-desc" class="fi" placeholder="اترك فارغاً أو اختر أدناه...">
+      <div id="desc-chips" style="display:flex;flex-wrap:wrap;gap:7px;margin-top:8px"></div>
     </div>
 
     <!-- زر الفاتورة المفصلة -->
-    <button class="inv-toggle" onclick="toggleInvoice()" id="inv-toggle-btn">
+    <button id="inv-toggle-btn" onclick="openInvoiceModal()"
+      style="width:100%;padding:14px;border:2px dashed rgba(59,130,246,.4);
+      border-radius:12px;background:rgba(59,130,246,.06);color:var(--pri);
+      font-size:16px;font-weight:800;cursor:pointer;margin-bottom:8px">
       🧾 إضافة فاتورة مفصلة (اختياري)
     </button>
-
-    <!-- قسم الفاتورة -->
-    <div class="inv-section" id="inv-section">
-      <table class="inv-table" id="inv-table">
-        <thead>
-          <tr>
-            <th style="width:35%">البيان</th>
-            <th style="width:18%">الكمية</th>
-            <th style="width:22%">السعر</th>
-            <th style="width:15%">الإجمالي</th>
-            <th style="width:10%"></th>
-          </tr>
-        </thead>
-        <tbody id="inv-rows"></tbody>
-      </table>
-      <button class="btn-add-row" onclick="addInvRow()">+ إضافة بند</button>
-      <div class="inv-total">
-        <div class="inv-total-lbl">إجمالي الفاتورة</div>
-        <div class="inv-total-num" id="inv-total-display">0.00</div>
-      </div>
+    <div id="inv-summary" style="display:none;background:rgba(16,185,129,.08);
+      border:1.5px solid rgba(16,185,129,.3);border-radius:10px;
+      padding:10px 14px;margin-bottom:8px;display:none;
+      justify-content:space-between;align-items:center">
+      <span style="font-size:14px;color:var(--grn);font-weight:700">✅ فاتورة مضافة</span>
+      <span id="inv-summary-total" style="font-size:16px;font-weight:900;color:var(--grn)"></span>
+      <button onclick="openInvoiceModal()"
+        style="padding:5px 12px;border:1.5px solid var(--grn);border-radius:8px;
+        background:none;color:var(--grn);font-size:13px;font-weight:700;cursor:pointer">
+        تعديل
+      </button>
     </div>
 
     <button class="btn btn-red" onclick="submitDebt()" style="margin-top:8px">
-      حفظ الدين
+      💾 حفظ المعاملة
     </button>
     <p style="font-size:12px;color:var(--txt3);text-align:center;margin-top:10px">
       يُحفظ فوراً على الجهاز — يُزامن عند عودة النت
@@ -859,35 +977,71 @@ select.fi option{
   </div>
   <div class="botnav">
     <button class="bnt" onclick="showTab('home')"><span class="ic">🏠</span>الرئيسية</button>
-    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>العملاء</button>
-    <button class="bnt active" onclick="showTab('add')"><span class="ic">➕</span>إضافة دين</button>
+    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>الزبائن</button>
+    <button class="bnt active" onclick="showTab('add')"><span class="ic">➕</span>إضافة معاملة</button>
     <button class="bnt" onclick="showTab('reports')"><span class="ic">📊</span>تقارير</button>
   </div>
 </div>
 
 <!-- ===== شاشة التقارير ===== -->
 <div class="screen" id="s-reports">
-  <div class="topnav">
-    <button class="icon-btn" onclick="changeDay(-1)" style="font-size:22px;font-weight:900">‹</button>
-    <div style="text-align:center">
-      <h2 id="rep-date" style="font-size:1.1em"></h2>
-      <div style="font-size:11px;color:var(--txt3);margin-top:2px" id="rep-nav-hint"></div>
-    </div>
-    <button class="icon-btn" id="rep-next" onclick="changeDay(1)" style="font-size:22px;font-weight:900">›</button>
+
+  <!-- رأس الصفحة: شعار + اسم المتجر -->
+  <div class="topnav" style="justify-content:center;position:relative">
+    <div id="rep-shop-logo" style="position:absolute;right:16px;font-size:26px;line-height:1"></div>
+    <h2 id="rep-shop-name" style="text-align:center">دفتر الدين</h2>
   </div>
-  <div class="content">
-    <div style="text-align:center;padding:10px;color:var(--txt2);font-size:14px" id="rep-date"></div>
-    <div class="stat-row" id="rep-stats"></div>
-    <div style="padding:0 16px 8px;font-size:13px;font-weight:700;color:var(--txt2)">
-      ديون اليوم
-    </div>
+
+  <!-- تبويبان: يومي / إجماليات -->
+  <div style="display:flex;border-bottom:2px solid var(--brd);background:var(--bg)">
+    <button id="tab-rep-daily" onclick="switchRepTab('daily')"
+      style="flex:1;padding:11px;font-size:15px;font-weight:800;border:none;cursor:pointer;
+      background:transparent;color:var(--pri);border-bottom:3px solid var(--pri)">
+      📅 يومي
+    </button>
+    <button id="tab-rep-totals" onclick="switchRepTab('totals')"
+      style="flex:1;padding:11px;font-size:15px;font-weight:800;border:none;cursor:pointer;
+      background:transparent;color:var(--txt3);border-bottom:3px solid transparent">
+      📊 إجماليات
+    </button>
+  </div>
+
+  <!-- ===== عرض يومي ===== -->
+  <div id="rep-daily-view" class="content">
     <div id="rep-list"></div>
   </div>
+
+  <!-- ===== عرض إجماليات ===== -->
+  <div id="rep-totals-view" class="content" style="display:none">
+    <div id="rep-totals-content"></div>
+  </div>
+
+  <!-- شريط التنقل بين الأيام — يظهر في اليومي فقط -->
+  <div id="rep-day-nav"
+    style="display:flex;align-items:center;justify-content:space-between;
+    padding:8px 16px;border-top:1px solid var(--brd);background:var(--bg);
+    flex-shrink:0">
+    <button onclick="changeDay(-1)"
+      style="width:44px;height:44px;border:none;border-radius:10px;
+      background:var(--bg3);color:var(--txt);font-size:26px;cursor:pointer;font-weight:900">‹</button>
+    <div style="text-align:center;cursor:pointer" onclick="openDatePicker()">
+      <div id="rep-date" style="font-size:16px;font-weight:900;color:var(--txt)"></div>
+      <div id="rep-nav-hint" style="font-size:12px;color:var(--pri);margin-top:2px">📅 اضغط لاختيار تاريخ</div>
+      <input type="date" id="rep-date-picker"
+        style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px"
+        onchange="jumpToDate(this.value)">
+    </div>
+    <button id="rep-next" onclick="changeDay(1)"
+      style="width:44px;height:44px;border:none;border-radius:10px;
+      background:var(--bg3);color:var(--txt);font-size:26px;cursor:pointer;font-weight:900">›</button>
+  </div>
+
   <div class="botnav">
     <button class="bnt" onclick="showTab('home')"><span class="ic">🏠</span>الرئيسية</button>
-    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>العملاء</button>
-    <button class="bnt" onclick="showTab('add')"><span class="ic">➕</span>إضافة دين</button>
+    <button class="bnt" onclick="showTab('customers')"><span class="ic">👥</span>الزبائن</button>
+    <button class="bnt" onclick="showTab('add')"><span class="ic">➕</span>إضافة معاملة</button>
     <button class="bnt active" onclick="showTab('reports')"><span class="ic">📊</span>تقارير</button>
+    <button class="bnt" onclick="showScreen('s-settings')"><span class="ic">⚙️</span>الإعدادات</button>
   </div>
 </div>
 
@@ -896,7 +1050,12 @@ select.fi option{
   <div class="topnav">
     <button class="icon-btn" onclick="goBack()">←</button>
     <h2 id="stmt-name">كشف الحساب</h2>
-    <button class="icon-btn" onclick="sendStatementToCustomer()" title="إرسال الكشف للعميل">📤</button>
+    <button onclick="sendStatementToCustomer()"
+      style="padding:8px 14px;border:1.5px solid var(--brd);border-radius:10px;
+      background:var(--bg2);color:var(--txt);font-size:14px;font-weight:800;cursor:pointer;
+      display:flex;align-items:center;gap:6px">
+      📋 كشف الحساب
+    </button>
   </div>
   <div class="content">
     <div style="padding:14px 16px">
@@ -991,22 +1150,30 @@ select.fi option{
   </div>
 </div>
 
-<!-- ===== مودال: كشف الحساب للعميل ===== -->
+<!-- ===== مودال: كشف الحساب للزبون ===== -->
 <div class="modal-bg" id="m-stmt-send">
-  <div class="modal" style="max-height:92vh;overflow-y:auto">
+  <div class="modal" style="max-height:94vh;overflow-y:auto;padding-bottom:80px">
     <button class="modal-close" onclick="closeModal('m-stmt-send')">✕</button>
-    <h3>📤 إرسال كشف الحساب</h3>
+    <h3>📋 كشف حساب الزبون</h3>
     <div id="stmt-send-content"></div>
-    <div style="display:flex;gap:10px;margin-top:16px;flex-wrap:wrap">
-      <button id="stmt-wa-btn" class="btn" style="flex:1;padding:12px;font-size:15px;border:none;
-        border-radius:10px;cursor:pointer;color:#fff;background:linear-gradient(135deg,#065f46,#10b981)"
-        onclick="sendStmtWhatsapp()">📲 واتساب</button>
-      <button class="btn" style="flex:1;padding:12px;font-size:15px;border:none;
-        border-radius:10px;cursor:pointer;color:#fff;background:var(--pri)"
-        onclick="window.print()">🖨️ طباعة</button>
-      <button class="btn" style="flex:1;padding:12px;font-size:15px;border:none;
-        border-radius:10px;cursor:pointer;color:var(--txt);background:var(--bg3)"
-        onclick="sendStmtEmail()">📧 بريد</button>
+    <div style="position:sticky;bottom:0;background:var(--bg);
+      padding:12px 0;border-top:1px solid var(--brd);margin-top:16px">
+      <div style="display:flex;gap:8px;margin-bottom:8px">
+        <button style="flex:1;padding:12px;font-size:15px;border:none;border-radius:10px;
+          cursor:pointer;color:#fff;background:linear-gradient(135deg,#065f46,#10b981);font-weight:800"
+          onclick="sendStmtWhatsapp()">📲 واتساب</button>
+        <button style="flex:1;padding:12px;font-size:15px;border:none;border-radius:10px;
+          cursor:pointer;color:#fff;background:var(--pri);font-weight:800"
+          onclick="sendStmtEmail()">📧 بريد</button>
+        <button style="flex:1;padding:12px;font-size:15px;border:none;border-radius:10px;
+          cursor:pointer;color:var(--txt2);background:var(--bg3);font-weight:800"
+          onclick="printStmt()">🖨️ طباعة</button>
+      </div>
+      <button onclick="closeModal('m-stmt-send')"
+        style="width:100%;padding:11px;background:var(--bg3);border:none;
+        border-radius:10px;color:var(--txt3);font-size:15px;font-weight:700;cursor:pointer">
+        إغلاق
+      </button>
     </div>
   </div>
 </div>
@@ -1022,17 +1189,17 @@ select.fi option{
 <div class="modal-bg" id="m-addcust">
   <div class="modal">
     <button class="modal-close" onclick="closeModal('m-addcust')">✕</button>
-    <h3>إضافة عميل جديد</h3>
+    <h3>إضافة زبون جديد</h3>
     <div id="addcust-err" class="err"></div>
     <div class="fg">
       <label>الاسم <span style="color:var(--red)">*</span></label>
-      <input type="text" id="nc-name" class="fi" placeholder="اسم العميل">
+      <input type="text" id="nc-name" class="fi" placeholder="اسم الزبون">
     </div>
     <div class="fg">
       <label>رقم الهاتف <span style="color:var(--red)">*</span></label>
       <input type="tel" id="nc-phone" class="fi fi-phone" placeholder="05XXXXXXXX">
     </div>
-    <button class="btn btn-grn" onclick="submitNewCustomer()">حفظ العميل</button>
+    <button class="btn btn-grn" onclick="submitNewCustomer()">حفظ الزبون</button>
   </div>
 </div>
 
@@ -1043,7 +1210,7 @@ select.fi option{
     <h3 id="pay-title">تسجيل دفعة</h3>
     <div id="pay-err" class="err"></div>
     <div style="background:var(--bg3);border-radius:14px;padding:18px;margin-bottom:18px">
-      <div style="font-size:15px;color:var(--txt2);font-weight:700;margin-bottom:6px">المتبقي على العميل</div>
+      <div style="font-size:15px;color:var(--txt2);font-weight:700;margin-bottom:6px">المتبقي على الزبون</div>
       <div style="font-size:2.2em;font-weight:900;color:var(--red)" id="pay-remaining">0</div>
     </div>
     <div class="fg">
@@ -1169,6 +1336,124 @@ select.fi option{
         style="width:100%;margin-top:12px;background:none;border:none;
         color:var(--txt3);font-size:15px;cursor:pointer;padding:8px">
         ← العودة للدخول
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== موديل الإضافة السريعة ===== -->
+<div class="modal-bg" id="m-quick-add">
+  <div class="modal" style="padding:0;border-radius:20px;overflow:hidden">
+    <div style="background:linear-gradient(135deg,#7c3aed,#a855f7);padding:14px 18px;
+      display:flex;align-items:center;justify-content:space-between">
+      <div style="font-size:18px;font-weight:900;color:#fff">⚡ إضافة سريعة</div>
+      <button onclick="closeModal('m-quick-add')"
+        style="width:32px;height:32px;border:none;border-radius:8px;
+        background:rgba(255,255,255,.2);color:#fff;font-size:16px;cursor:pointer">✕</button>
+    </div>
+    <div style="padding:16px">
+      <div id="quick-recent" style="margin-bottom:12px"></div>
+      <div class="fg" style="margin-bottom:10px">
+        <div style="position:relative">
+          <input type="text" id="quick-cust-search" class="fi"
+            placeholder="ادخل اسم الزبون..."
+            autocomplete="off"
+            oninput="filterQuickSearch(this.value)"
+            style="font-size:17px">
+          <input type="hidden" id="quick-cust-id" value="">
+          <div id="quick-cust-dropdown"
+            style="display:none;position:absolute;top:100%;right:0;left:0;
+            background:var(--bg2);border:2px solid var(--brd);border-radius:0 0 12px 12px;
+            z-index:200;max-height:180px;overflow-y:auto">
+          </div>
+        </div>
+      </div>
+      <div class="fg" style="margin-bottom:10px">
+        <input type="number" id="quick-amount" class="fi"
+          placeholder="المبلغ" min="1" step="0.01"
+          style="font-size:22px;font-weight:900;text-align:center">
+        <div id="quick-amount-chips"
+          style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px;justify-content:center">
+        </div>
+      </div>
+      <div id="quick-err" class="err"></div>
+      <button onclick="submitQuickDebt()"
+        style="width:100%;padding:15px;background:linear-gradient(135deg,#7c3aed,#a855f7);
+        border:none;border-radius:12px;color:#fff;font-size:18px;font-weight:900;cursor:pointer">
+        💾 حفظ
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== مودال الفاتورة المفصلة ===== -->
+<div id="m-inv-modal">
+  <div class="inv-overlay" onclick="closeInvoiceModal(false)"></div>
+  <div class="inv-sheet">
+
+    <!-- رأس المودال -->
+    <div class="inv-sheet-head">
+      <div>
+        <div style="font-size:18px;font-weight:900">🧾 الفاتورة المفصلة</div>
+        <div style="font-size:12px;opacity:.8;margin-top:2px" id="inv-cust-name-display"></div>
+      </div>
+      <div class="inv-type-toggle">
+        <button class="inv-type-btn active" id="inv-type-normal" onclick="setInvType('normal')">عادية</button>
+        <button class="inv-type-btn" id="inv-type-tax" onclick="setInvType('tax')">ضريبية</button>
+      </div>
+      <button onclick="closeInvoiceModal(false)"
+        style="width:36px;height:36px;border:none;border-radius:9px;
+        background:rgba(255,255,255,.2);color:#fff;font-size:18px;cursor:pointer">✕</button>
+    </div>
+
+    <!-- معلومات الضريبة -->
+    <div id="inv-tax-info" style="display:none;background:rgba(251,191,36,.1);
+      border-bottom:1px solid rgba(251,191,36,.3);padding:8px 16px;
+      font-size:13px;font-weight:700;color:#92400e;flex-shrink:0">
+    </div>
+
+    <!-- صفوف البنود -->
+    <div class="inv-sheet-body">
+      <div id="inv-rows-modal"></div>
+      <button onclick="addInvRowModal()"
+        style="width:100%;padding:12px;border:2px dashed rgba(59,130,246,.4);
+        border-radius:12px;background:rgba(59,130,246,.05);color:var(--pri);
+        font-size:16px;font-weight:800;cursor:pointer;margin-bottom:12px">
+        + إضافة صنف
+      </button>
+
+      <!-- إجماليات الفاتورة -->
+      <div id="inv-totals-display"
+        style="background:var(--bg2);border:2px solid var(--brd);
+        border-radius:14px;padding:14px 16px"></div>
+    </div>
+
+    <!-- أزرار الإجراءات -->
+    <div class="inv-sheet-foot">
+      <div style="display:flex;gap:8px;margin-bottom:10px">
+        <button onclick="shareInvWhatsapp()"
+          style="flex:1;padding:11px;background:rgba(37,211,102,.12);
+          border:1.5px solid rgba(37,211,102,.4);border-radius:10px;
+          color:#25d366;font-size:14px;font-weight:700;cursor:pointer">
+          📲 واتساب
+        </button>
+        <button onclick="shareInvEmail()"
+          style="flex:1;padding:11px;background:rgba(59,130,246,.1);
+          border:1.5px solid rgba(59,130,246,.3);border-radius:10px;
+          color:var(--pri);font-size:14px;font-weight:700;cursor:pointer">
+          📧 بريد
+        </button>
+        <button onclick="printInv()"
+          style="flex:1;padding:11px;background:var(--bg3);
+          border:1.5px solid var(--brd);border-radius:10px;
+          color:var(--txt2);font-size:14px;font-weight:700;cursor:pointer">
+          🖨️ طباعة
+        </button>
+      </div>
+      <button onclick="closeInvoiceModal(true)"
+        style="width:100%;padding:14px;background:linear-gradient(135deg,#065f46,#10b981);
+        border:none;border-radius:12px;color:#fff;font-size:17px;font-weight:900;cursor:pointer">
+        ✅ تأكيد الفاتورة
       </button>
     </div>
   </div>
