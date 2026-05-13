@@ -1504,24 +1504,37 @@ select.fi option{
       flex-direction:column;gap:10px;background:#f5f5f5;">
       <div class="ai-bot-msg">مرحبا! اسألني عن أي زبون أو عن الديون.</div>
     </div>
-    <div style="display:flex;gap:8px;padding:12px;background:white;
-      border-top:1px solid #eee;flex-shrink:0;">
-     <button id="aiMicBtn" onmousedown="startAIMic()" onmouseup="stopAIMic()" ontouchstart="startAIMic(event)" ontouchend="stopAIMic()"
-        style="width:50px;height:50px;border-radius:50%;border:1px solid #ddd;
-        background:white;cursor:pointer;font-size:22px;display:flex;
-        align-items:center;justify-content:center;flex-shrink:0;">
-        <i class="ti ti-microphone"></i>
-      </button>
-      <input id="aiInput" type="text" placeholder="اكتب أو استخدم الميكروفون..."
-        style="flex:1;padding:12px;font-size:17px;border:1px solid #ddd;
-        border-radius:8px;direction:rtl;font-family:inherit;"
-        onkeypress="if(event.key==='Enter')sendAI()">
-      <button onclick="sendAI()"
-        style="padding:12px 16px;background:#1565c0;color:white;border:none;
-        border-radius:8px;font-size:17px;cursor:pointer;font-family:inherit;">
-        إرسال
-      </button>
-    </div>
+<div style="display:flex;gap:8px;padding:10px 14px;
+  background:white;border-top:1px solid #eee;flex-shrink:0;">
+  <button id="aiMicBtn"
+    onmousedown="startAIMic()" onmouseup="stopAIMic()"
+    ontouchstart="startAIMic(event)" ontouchend="stopAIMic()"
+    style="width:48px;height:48px;border-radius:50%;
+    border:2px solid #1565c0;background:white;
+    cursor:pointer;display:flex;align-items:center;
+    justify-content:center;flex-shrink:0;">
+    <svg id="aiMicIcon" xmlns="http://www.w3.org/2000/svg"
+      width="24" height="24" viewBox="0 0 24 24"
+      fill="none" stroke="#1565c0" stroke-width="2">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>
+  </button>
+  <input id="aiInput" type="text"
+    placeholder="اكتب أو اضغط المايك..."
+    style="flex:1;padding:12px;font-size:17px;
+    border:1px solid #ddd;border-radius:8px;
+    direction:rtl;font-family:inherit;"
+    onkeypress="if(event.key==='Enter')sendAI()">
+  <button onclick="sendAI()"
+    style="padding:12px 18px;background:#1565c0;
+    color:white;border:none;border-radius:8px;
+    font-size:22px;cursor:pointer;line-height:1;">
+    &#10148;
+  </button>
+</div>
     <div id="aiMicTxt"
       style="text-align:center;font-size:13px;color:#888;
       padding:2px 12px 8px;min-height:20px;background:white;"></div>
