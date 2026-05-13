@@ -3211,3 +3211,286 @@ async function doResetPin() {
 }
 
 init();
+
+// ---- متغيرات AI Chat ----
+let aiHistory = [];
+let aiRecognition = null;
+let aiListening = false;
+let aiBusy = false;
+
+const AI_SYSTEM = `أنت مساعد ذكي لتاجر فلسطيني لديه دفتر ديون.
+قواعد صارمة:
+- رد بالعامية الشامية الفلسطينية فقط
+- جملة أو جملتين بالحد الأقصى
+- استخدم الأداة دائماً قبل الإجابة
+- الوحدة شيكل
+- لا تتكلم عن أي شيء خارج الديون والزبائن`;
+
+const AI_TOOLS = [
+  {
+    name: 'query_customer_balance',
+    description: 'استعلام عن رصيد ودين زبون معين بالاسم',
+    input_schema: {
+      type: 'object',
+      properties: {
+        customer_name: { type: 'string', description: 'اسم الزبون' }
+      },
+      required: ['customer_name']
+    }
+  },
+  {
+    name: 'get_customer_transactions',
+    description: 'عرض تفاصيل معاملات زبون معين — شو اشترى',
+    input_schema: {
+      type: 'object',
+      properties: {
+        customer_name: { type: 'string', description: 'اسم الزبون' }
+      },
+      required: ['customer_name']
+    }
+  },
+  {
+    name: 'list_all_debtors',
+    description: 'عرض كل الزبائن اللي عليهم دين غير مدفوع',
+    input_schema: { type: 'object', properties: {}, required: [] }
+  }
+];
+
+// ---- قراءة LocalDB بطريقة مرنة ----
+async function aiDbGetAll(storeName) {
+  try {
+    if (window.localDB) {
+      if (typeof window.localDB.getAll === 'function')
+        return await window.localDB.getAll(storeName);
+      if (window.localDB[storeName]) {
+        if (typeof window.localDB[storeName].getAll === 'function')
+          return await window.localDB[storeName].getAll();
+        if (typeof window.localDB[storeName].toArray === 'function')
+          return await window.localDB[storeName].toArray();
+      }
+    }
+    if (window.db) {
+      if (typeof window.db.getAll === 'function')
+        return await window.db.getAll(storeName);
+    }
+  } catch (e) {
+    console.error('aiDbGetAll error:', e);
+  }
+  return [];
+}
+
+// ---- تنفيذ الأدوات ----
+async function aiRunTool(name, input) {
+  try {
+    const mId = window.MERCHANT_ID || window.merchantId || '';
+
+    if (name === 'query_customer_balance') {
+      const customers = await aiDbGetAll('customers');
+      const found = customers.find(c =>
+        (mId === '' || c.merchant_id === mId) &&
+        (c.name.includes(input.customer_name) || input.customer_name.includes(c.name))
+      );
+      if (!found) return { error: true, msg: `ما في زبون اسمه "${input.customer_name}"` };
+
+      const txns = await aiDbGetAll('transactions');
+      const mine = txns.filter(t => t.customer_id === found.id);
+      const debt = mine.filter(t => t.type === 'debt' || t.type === 'debit')
+                       .reduce((s, t) => s + (t.amount || 0), 0);
+      const paid = mine.filter(t => t.type === 'payment' || t.type === 'credit')
+                       .reduce((s, t) => s + (t.amount || 0), 0);
+      return {
+        name: found.name,
+        balance: debt - paid,
+        currency: 'شيكل',
+        txn_count: mine.length
+      };
+    }
+
+    if (name === 'get_customer_transactions') {
+      const customers = await aiDbGetAll('customers');
+      const found = customers.find(c =>
+        (mId === '' || c.merchant_id === mId) &&
+        (c.name.includes(input.customer_name) || input.customer_name.includes(c.name))
+      );
+      if (!found) return { error: true, msg: `ما في زبون اسمه "${input.customer_name}"` };
+
+      const txns = await aiDbGetAll('transactions');
+      const mine = txns
+        .filter(t => t.customer_id === found.id)
+        .sort((a, b) => new Date(b.created_at || b.date) - new Date(a.created_at || a.date))
+        .slice(0, 6);
+
+      return {
+        name: found.name,
+        transactions: mine.map(t => ({
+          type: (t.type === 'debt' || t.type === 'debit') ? 'دين' : 'دفعة',
+          amount: t.amount,
+          notes: t.notes || t.description || '',
+          date: new Date(t.created_at || t.date).toLocaleDateString('ar')
+        }))
+      };
+    }
+
+    if (name === 'list_all_debtors') {
+      const customers = await aiDbGetAll('customers');
+      const txns = await aiDbGetAll('transactions');
+
+      const debtors = customers
+        .filter(c => mId === '' || c.merchant_id === mId)
+        .map(c => {
+          const mine = txns.filter(t => t.customer_id === c.id);
+          const debt = mine.filter(t => t.type === 'debt' || t.type === 'debit')
+                           .reduce((s, t) => s + (t.amount || 0), 0);
+          const paid = mine.filter(t => t.type === 'payment' || t.type === 'credit')
+                           .reduce((s, t) => s + (t.amount || 0), 0);
+          return { name: c.name, balance: debt - paid };
+        })
+        .filter(c => c.balance > 0)
+        .sort((a, b) => b.balance - a.balance);
+
+      return { debtors, count: debtors.length };
+    }
+
+  } catch (err) {
+    return { error: true, msg: 'خطأ في قراءة البيانات: ' + err.message };
+  }
+  return { error: 'unknown tool' };
+}
+
+// ---- API Call ----
+async function aiCallAPI(messages) {
+  const r = await fetch('https://api.anthropic.com/v1/messages', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      model: 'claude-sonnet-4-20250514',
+      max_tokens: 1000,
+      system: AI_SYSTEM,
+      tools: AI_TOOLS,
+      messages
+    })
+  });
+  return r.json();
+}
+
+// ---- إضافة رسالة للمحادثة ----
+function aiAddMsg(html, cls) {
+  const box = document.getElementById('aiMessages');
+  const d = document.createElement('div');
+  d.className = cls;
+  d.innerHTML = html;
+  box.appendChild(d);
+  box.scrollTop = box.scrollHeight;
+  return d;
+}
+
+// ---- إرسال رسالة ----
+async function sendAI() {
+  const inp = document.getElementById('aiInput');
+  const txt = inp.value.trim();
+  if (!txt || aiBusy) return;
+
+  inp.value = '';
+  aiBusy = true;
+
+  aiAddMsg(txt, 'ai-user-msg');
+  const thinking = aiAddMsg('يفكر...', 'ai-think-msg');
+
+  aiHistory.push({ role: 'user', content: txt });
+
+  try {
+    let res = await aiCallAPI(aiHistory);
+
+    while (res.stop_reason === 'tool_use') {
+      const calls = res.content.filter(b => b.type === 'tool_use');
+      aiHistory.push({ role: 'assistant', content: res.content });
+
+      const results = await Promise.all(calls.map(async tc => ({
+        type: 'tool_result',
+        tool_use_id: tc.id,
+        content: JSON.stringify(await aiRunTool(tc.name, tc.input))
+      })));
+
+      aiHistory.push({ role: 'user', content: results });
+      res = await aiCallAPI(aiHistory);
+    }
+
+    const tb = res.content.find(b => b.type === 'text');
+    const reply = tb ? tb.text : 'ما قدرت أجاوب';
+    aiHistory.push({ role: 'assistant', content: res.content });
+
+    thinking.remove();
+    aiAddMsg(reply, 'ai-bot-msg');
+
+  } catch (e) {
+    thinking.remove();
+    aiAddMsg('صار خطأ في الاتصال', 'ai-bot-msg');
+  }
+
+  aiBusy = false;
+}
+
+// ---- فتح / إغلاق النافذة ----
+function openAIChat() {
+  const ov = document.getElementById('aiOverlay');
+  ov.style.display = 'flex';
+  document.getElementById('aiInput').focus();
+}
+
+function closeAIChat() {
+  document.getElementById('aiOverlay').style.display = 'none';
+  if (aiRecognition) aiRecognition.stop();
+}
+
+function aiOverlayClick(e) {
+  if (e.target === document.getElementById('aiOverlay')) closeAIChat();
+}
+
+// ---- الميكروفون ----
+function toggleAIMic() {
+  const supported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
+  if (!supported) {
+    document.getElementById('aiMicTxt').textContent = 'المتصفح ما يدعم الصوت، استخدم Chrome';
+    return;
+  }
+
+  if (aiListening) { aiRecognition.stop(); return; }
+
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  aiRecognition = new SR();
+  aiRecognition.lang = 'ar-PS';
+  aiRecognition.interimResults = true;
+  aiRecognition.continuous = false;
+
+  aiRecognition.onstart = () => {
+    aiListening = true;
+    document.getElementById('aiMicBtn').classList.add('mic-on');
+    document.getElementById('aiMicTxt').textContent = 'يسمع... تكلم الآن';
+  };
+
+  aiRecognition.onresult = (e) => {
+    let t = '';
+    for (let i = e.resultIndex; i < e.results.length; i++)
+      t += e.results[i][0].transcript;
+    document.getElementById('aiInput').value = t;
+    if (e.results[e.results.length - 1].isFinal) {
+      document.getElementById('aiMicTxt').textContent = 'تم التسجيل';
+      setTimeout(() => sendAI(), 300);
+    }
+  };
+
+  aiRecognition.onerror = (e) => {
+    document.getElementById('aiMicTxt').textContent =
+      e.error === 'not-allowed' ? 'اسمح للمتصفح بالميكروفون' : 'خطأ في التسجيل';
+    aiStopMic();
+  };
+
+  aiRecognition.onend = () => aiStopMic();
+  aiRecognition.start();
+}
+
+function aiStopMic() {
+  aiListening = false;
+  document.getElementById('aiMicBtn').classList.remove('mic-on');
+  setTimeout(() => { document.getElementById('aiMicTxt').textContent = ''; }, 2000);
+}
