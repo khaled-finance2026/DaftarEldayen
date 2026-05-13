@@ -571,15 +571,6 @@ select.fi option{
         نسيت الرقم السري
       </button>
     </div>
-    <!-- زر المطور — مؤقت -->
-    <div style="text-align:center;margin-top:20px">
-      <button onclick="devLogin()"
-        style="background:none;border:1px dashed rgba(100,116,139,.3);
-        border-radius:8px;color:var(--txt3);font-size:12px;
-        cursor:pointer;padding:6px 14px;opacity:.5">
-        🛠️ دخول المطور
-      </button>
-    </div>
   </div>
 </div>
 
@@ -800,15 +791,9 @@ select.fi option{
 
   <!-- شريط الترقية للمجانيين -->
   <div id="upgrade-banner" style="display:none;background:linear-gradient(135deg,#1e3a8a,#2563eb);
-    padding:10px 16px;align-items:center;gap:12px;justify-content:space-between">
-    <div style="font-size:13px;color:rgba(255,255,255,.85);flex:1;line-height:1.5">
-      🔒 بياناتك محلية فقط — اشترك للنسخ السحابي
-    </div>
-    <button onclick="showUpgradeModal()"
-      style="padding:7px 14px;background:#fff;color:#1e3a8a;border:none;
-      border-radius:8px;font-size:13px;font-weight:800;cursor:pointer;flex-shrink:0">
-      ارقِّ الآن
-    </button>
+    padding:7px 16px;text-align:center;cursor:pointer" ondblclick="showUpgradeModal()">
+    <span style="font-size:13px;color:rgba(255,255,255,.75)">🔒 بياناتك محلية فقط — </span>
+    <span style="font-size:14px;font-weight:900;color:#fbbf24">ترقية الآن</span>
   </div>
 
   <!-- الشريط العلوي: شعار + اسم المتجر في المنتصف -->
@@ -1475,15 +1460,19 @@ select.fi option{
 </div>
 
 <script src="app.js"></script>
-</script>
-  <!-- ========== أضف هذا كله قبل </body> مباشرة في index.html ========== -->
 
 <button id="aiFab" onclick="openAIChat()" aria-label="اسأل عن الدفتر"
-  style="position:fixed;bottom:90px;left:20px;width:58px;height:58px;
+  style="position:fixed;bottom:100px;left:24px;width:58px;height:58px;
   border-radius:50%;background:#1565c0;color:white;border:none;cursor:pointer;
-  font-size:26px;display:flex;align-items:center;justify-content:center;
+  display:flex;align-items:center;justify-content:center;
   box-shadow:0 3px 10px rgba(0,0,0,0.35);z-index:900;">
-  <i class="ti ti-message-circle"></i>
+  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
+    fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+    <circle cx="9" cy="10" r="1" fill="white" stroke="none"/>
+    <circle cx="12" cy="10" r="1" fill="white" stroke="none"/>
+    <circle cx="15" cy="10" r="1" fill="white" stroke="none"/>
+  </svg>
 </button>
 
 <div id="aiOverlay" onclick="aiOverlayClick(event)"
@@ -1495,8 +1484,8 @@ select.fi option{
       display:flex;justify-content:space-between;align-items:center;flex-shrink:0;">
       <span style="font-size:20px;font-weight:500;">اسأل عن الدفتر</span>
       <button onclick="closeAIChat()" style="background:none;border:none;
-        cursor:pointer;color:white;font-size:26px;line-height:1;padding:0;">
-        <i class="ti ti-x"></i>
+        cursor:pointer;color:white;font-size:28px;line-height:1;padding:0;">
+        ✕
       </button>
     </div>
     <div id="aiMessages"
@@ -1556,7 +1545,8 @@ select.fi option{
   border:3px solid #c62828;
   animation:micPulse 1s infinite;
 }
-#aiMicBtn.mic-on i{color:#c62828;}
+#aiMicBtn.mic-on svg{stroke:#c62828;}
+#aiMicBtn.mic-on span{filter:hue-rotate(180deg);}
 @keyframes micPulse{
   0%{box-shadow:0 0 0 0 rgba(198,40,40,0.5);}
     70%{box-shadow:0 0 0 14px rgba(198,40,40,0);}

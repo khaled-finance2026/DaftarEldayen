@@ -1228,6 +1228,7 @@ async function init() {
     if (navigator.onLine) setTimeout(doSync, 1500);
     checkLongPending();
     setInterval(checkLongPending, 30 * 60 * 1000);
+    setTimeout(initGlobalMic, 500);
 
   } catch(e) {
     console.warn('init error', e);
@@ -1611,6 +1612,19 @@ async function submitNewCustomer() {
 
   if (!name)  { showErr(err, 'أدخل الاسم'); return; }
   if (!phone) { showErr(err, 'رقم الهاتف مطلوب'); return; }
+  if (phone.replace(/\D/g,'').length < 9) { showErr(err, 'رقم الهاتف قصير جداً — يجب 9 أرقام على الأقل'); return; }
+
+  // تحذير عند وجود اسم مشابه
+  const similar = allCustsCache.filter(c =>
+    c.merchant_id === SESSION.merchant_id &&
+    (c.name.includes(name) || name.includes(c.name)) &&
+    c.name !== name
+  );
+  if (similar.length > 0) {
+    const names = similar.map(c => c.name).join('، ');
+    const ok = confirm(`⚠️ يوجد زبون مشابه: ${names}\n\nهل تريد المتابعة بإضافة "${name}"؟\nإذا أضفت لقباً سيكون أكثر تميزاً.`);
+    if (!ok) return;
+  }
 
   const id = crypto.randomUUID();
   const now = new Date().toISOString();
@@ -1654,6 +1668,7 @@ async function submitDebt() {
 
   if (!custId)       { showErr(err, 'اختر زبوناً'); return; }
   if (!phone)        { showErr(err, 'رقم الهاتف مطلوب'); return; }
+  if (phone.replace(/\D/g,'').length < 9) { showErr(err, 'رقم الهاتف قصير جداً'); return; }
   if (!amount || amount <= 0) { showErr(err, 'أدخل مبلغاً صحيحاً'); return; }
 
   // تحديث هاتف الزبون إن تغير
@@ -1864,7 +1879,7 @@ async function loadHomeData() {
 
   if (!latest.length) {
     document.getElementById('home-txlist').innerHTML =
-      '<div class="empty"><div class="em-icon">📒</div><p>لا توجد ديون معلقة</p></div>';
+      '<div class="empty"><div style="font-size:64px;margin-bottom:8px">😊</div><p style="font-size:18px;font-weight:700;color:var(--grn)">لا توجد ديون معلقة</p><p style="font-size:14px;color:var(--txt2)">يوم مريح!</p></div>';
     return;
   }
 
@@ -1960,8 +1975,17 @@ async function renderCustomers(filter='') {
   });
 
   if (!custData.length) {
-    document.getElementById('cust-list').innerHTML =
-      '<div class="empty"><div class="em-icon">👥</div><p>لا يوجد زبائن — اضغط + لإضافة زبون</p></div>';
+    document.getElementById('cust-list').innerHTML = `
+      <div class="empty" onclick="openModal('m-addcust')"
+        style="cursor:pointer;padding:40px 20px">
+        <div style="width:90px;height:90px;border-radius:50%;
+          background:linear-gradient(135deg,#e0f2fe,#bfdbfe);
+          display:flex;align-items:center;justify-content:center;
+          margin:0 auto 16px;font-size:40px;
+          box-shadow:0 0 0 8px rgba(59,130,246,.1)">👥</div>
+        <p style="font-size:18px;font-weight:700;color:var(--txt1);margin:0">لا يوجد زبائن</p>
+        <p style="font-size:15px;color:var(--pri);margin:8px 0 0;font-weight:600">اضغط لإضافة زبون جديد</p>
+      </div>`;
     return;
   }
 
@@ -1980,7 +2004,7 @@ async function renderCustomers(filter='') {
           ? hasPartial
             ? '<span class="li-status s-partial">جزئي</span>'
             : '<span class="li-status s-unpaid">مديون</span>'
-          : '<span class="li-status s-paid">سوي ✓</span>'}
+          : '<span class="li-status s-paid">مسدَّد ✓</span>'}
       </div>
     </div>`;
   }).join('');
@@ -1993,7 +2017,27 @@ function setSortCustomers(mode, btn) {
   renderCustomers(custSearchQ);
 }
 
-async function filterCustomers(q) { await renderCustomers(q); }
+async function filterCustomers(q) {
+  await renderCustomers(q);
+  // إذا لا توجد نتائج وهناك نص → اعرض زر الإضافة
+  const list = document.getElementById('cust-list');
+  if (q.trim() && list && !allCustsCache.some(c =>
+    c.merchant_id === SESSION?.merchant_id &&
+    c.name.toLowerCase().includes(q.toLowerCase())
+  )) {
+    list.innerHTML = `
+      <div class="empty" style="padding:30px 20px">
+        <div style="font-size:40px;margin-bottom:12px">🔍</div>
+        <p style="font-size:17px;font-weight:700;color:var(--txt1)">"${q}" غير مسجل</p>
+        <p style="font-size:14px;color:var(--txt2);margin-bottom:16px">هل تريد إضافته كزبون جديد؟</p>
+        <button onclick="document.getElementById('nc-name').value='${q.replace(/'/g,"\\'")}';openModal('m-addcust')"
+          style="padding:12px 24px;background:var(--pri);color:white;border:none;
+          border-radius:10px;font-size:16px;font-weight:700;cursor:pointer">
+          ➕ إضافة "${q}"
+        </button>
+      </div>`;
+  }
+}
 
 // ================================================================
 // كشف حساب زبون
@@ -2823,6 +2867,33 @@ function showScreen(id) {
   if (id === 's-settings') showSettings();
 }
 
+// ================================================================
+// السحب للتنقل بين الشاشات الرئيسية
+// ================================================================
+(function initSwipe() {
+  const TAB_ORDER = ['home','customers','add','reports'];
+  const TAB_MAP   = {'home':'s-home','customers':'s-customers','add':'s-add','reports':'s-reports'};
+  let swTouchX = 0;
+  document.addEventListener('touchstart', e => {
+    swTouchX = e.touches[0].clientX;
+  }, {passive:true});
+  document.addEventListener('touchend', e => {
+    const dx = e.changedTouches[0].clientX - swTouchX;
+    if (Math.abs(dx) < 60) return;
+    const active = document.querySelector('.screen.active');
+    if (!active) return;
+    const currentTab = Object.keys(TAB_MAP).find(k => TAB_MAP[k] === active.id);
+    if (!currentTab) return;
+    const idx = TAB_ORDER.indexOf(currentTab);
+    if (idx < 0) return;
+    // السحب لليسار = التالي (عكس RTL)
+    const nextIdx = dx < 0
+      ? Math.min(idx + 1, TAB_ORDER.length - 1)
+      : Math.max(idx - 1, 0);
+    if (nextIdx !== idx) showTab(TAB_ORDER[nextIdx]);
+  }, {passive:true});
+})();
+
 function goBack() { showScreen(prevScreen); }
 
 function openModal(id) {
@@ -3359,16 +3430,13 @@ async function aiRunTool(name, input) {
 
 // ---- API Call ----
 async function aiCallAPI(messages) {
-  const r = await fetch('https://api.anthropic.com/v1/messages', {
+  const r = await fetch('https://ziehhwdphavnbmltxnmc.supabase.co/functions/v1/ai-chat', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      model: 'claude-sonnet-4-20250514',
-      max_tokens: 1000,
-      system: AI_SYSTEM,
-      tools: AI_TOOLS,
-      messages
-    })
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer ' + (window.SESSION?.access_token || '')
+    },
+    body: JSON.stringify({ messages, system: AI_SYSTEM, tools: AI_TOOLS })
   });
   return r.json();
 }
@@ -3415,8 +3483,8 @@ async function sendAI() {
       res = await aiCallAPI(aiHistory);
     }
 
-    const tb = res.content.find(b => b.type === 'text');
-    const reply = tb ? tb.text : 'ما قدرت أجاوب';
+    const tb = res.content && res.content.find(b => b.type === 'text');
+    const reply = (tb && tb.text && tb.text.trim()) ? tb.text : 'ما قدرت أجاوب';
     aiHistory.push({ role: 'assistant', content: res.content });
 
     thinking.remove();
@@ -3447,47 +3515,6 @@ function aiOverlayClick(e) {
 }
 
 // ---- الميكروفون ----
-function toggleAIMic() {
-  const supported = 'webkitSpeechRecognition' in window || 'SpeechRecognition' in window;
-  if (!supported) {
-    document.getElementById('aiMicTxt').textContent = 'المتصفح ما يدعم الصوت، استخدم Chrome';
-    return;
-  }
-
-  if (aiListening) { aiRecognition.stop(); return; }
-
-  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-  aiRecognition = new SR();
-  aiRecognition.lang = 'ar-SA';
-  aiRecognition.interimResults = true;
-  aiRecognition.continuous = false;
-
-  aiRecognition.onstart = () => {
-    aiListening = true;
-    document.getElementById('aiMicBtn').classList.add('mic-on');
-    document.getElementById('aiMicTxt').textContent = 'يسمع... تكلم الآن';
-  };
-
-  aiRecognition.onresult = (e) => {
-    let t = '';
-    for (let i = e.resultIndex; i < e.results.length; i++)
-      t += e.results[i][0].transcript;
-    document.getElementById('aiInput').value = t;
-    if (e.results[e.results.length - 1].isFinal) {
-      document.getElementById('aiMicTxt').textContent = 'تم التسجيل';
-      setTimeout(() => sendAI(), 300);
-    }
-  };
-
-  aiRecognition.onerror = (e) => {
-    document.getElementById('aiMicTxt').textContent =
-      e.error === 'not-allowed' ? 'اسمح للمتصفح بالميكروفون' : 'خطأ في التسجيل';
-    aiStopMic();
-  };
-
-  aiRecognition.onend = () => aiStopMic();
-  aiRecognition.start();
-}
 function startAIMic(e) {
   if (e) e.preventDefault();
   const supported = 'webkitSpeechRecognition' in window
@@ -3528,4 +3555,83 @@ function aiStopMic() {
   aiListening = false;
   document.getElementById('aiMicBtn').classList.remove('mic-on');
   setTimeout(() => { document.getElementById('aiMicTxt').textContent = ''; }, 2000);
+}
+
+// ================================================================
+// ميكروفون عالمي لكل خانات النص
+// ================================================================
+let globalMicActive = false;
+let globalMicRec = null;
+let globalMicTarget = null;
+
+function initGlobalMic() {
+  // إضافة أيقونة مايك لكل input text/tel/search
+  document.querySelectorAll('input[type="text"],input[type="tel"],input[type="search"],input[type="number"]').forEach(inp => {
+    if (inp.dataset.micAdded) return;
+    inp.dataset.micAdded = '1';
+    const wrap = inp.parentElement;
+    const pos = window.getComputedStyle(wrap).position;
+    if (pos === 'static') wrap.style.position = 'relative';
+    inp.style.paddingLeft = '36px';
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.style.cssText = 'position:absolute;left:8px;top:50%;transform:translateY(-50%);' +
+      'width:26px;height:26px;background:none;border:none;cursor:pointer;' +
+      'display:flex;align-items:center;justify-content:center;z-index:5;padding:0;opacity:.5';
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+      viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2.5">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>`;
+    btn.addEventListener('mousedown', e => { e.preventDefault(); startGlobalMic(inp, btn); });
+    btn.addEventListener('mouseup',   e => { e.preventDefault(); stopGlobalMic(); });
+    btn.addEventListener('touchstart', e => { e.preventDefault(); startGlobalMic(inp, btn); }, {passive:false});
+    btn.addEventListener('touchend',   e => { e.preventDefault(); stopGlobalMic(); }, {passive:false});
+    wrap.appendChild(btn);
+  });
+}
+
+function startGlobalMic(targetInput, btn) {
+  if (!('webkitSpeechRecognition' in window || 'SpeechRecognition' in window)) return;
+  globalMicTarget = targetInput;
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  globalMicRec = new SR();
+  globalMicRec.lang = 'ar-SA';
+  globalMicRec.interimResults = true;
+  globalMicRec.continuous = true;
+  globalMicRec.onstart = () => {
+    globalMicActive = true;
+    btn.style.opacity = '1';
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+      viewBox="0 0 24 24" fill="none" stroke="#c62828" stroke-width="2.5">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>`;
+  };
+  globalMicRec.onresult = e => {
+    let t = '';
+    for (let i = 0; i < e.results.length; i++) t += e.results[i][0].transcript;
+    globalMicTarget.value = t;
+    globalMicTarget.dispatchEvent(new Event('input'));
+  };
+  globalMicRec.onend = () => {
+    globalMicActive = false;
+    btn.style.opacity = '.5';
+    btn.innerHTML = `<svg xmlns="http://www.w3.org/2000/svg" width="18" height="18"
+      viewBox="0 0 24 24" fill="none" stroke="#1565c0" stroke-width="2.5">
+      <rect x="9" y="2" width="6" height="12" rx="3"/>
+      <path d="M5 10a7 7 0 0 0 14 0"/>
+      <line x1="12" y1="19" x2="12" y2="22"/>
+      <line x1="8" y1="22" x2="16" y2="22"/>
+    </svg>`;
+  };
+  globalMicRec.start();
+}
+
+function stopGlobalMic() {
+  if (globalMicRec) globalMicRec.stop();
 }
