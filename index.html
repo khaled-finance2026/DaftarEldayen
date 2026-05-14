@@ -533,7 +533,7 @@ select.fi option{
       <div style="margin-top:8px;background:rgba(59,130,246,.15);
         border-radius:8px;padding:4px 14px;display:inline-block">
         <span style="font-size:13px;font-weight:900;color:var(--pri)">
-          v12.0
+          v13.0
         </span>
       </div>
     </div>
@@ -552,10 +552,13 @@ select.fi option{
           onkeydown="if(event.key==='Enter')doLogin()"
           style="padding-left:52px">
         <button type="button"
-          onclick="var i=document.getElementById('inp-pin');i.type=i.type==='password'?'text':'password';this.textContent=i.type==='password'?'👁':'🙈'"
+          onmousedown="document.getElementById('inp-pin').type='text'"
+          onmouseup="document.getElementById('inp-pin').type='password'"
+          ontouchstart="event.preventDefault();document.getElementById('inp-pin').type='text'"
+          ontouchend="document.getElementById('inp-pin').type='password'"
           style="position:absolute;left:14px;top:50%;transform:translateY(-50%);
           background:none;border:none;font-size:20px;cursor:pointer;color:var(--txt3);
-          padding:4px;line-height:1">👁</button>
+          padding:4px;line-height:1;user-select:none">👁</button>
       </div>
     </div>
     <button class="btn btn-pri" id="login-btn" onclick="doLogin()">دخول</button>
@@ -571,6 +574,14 @@ select.fi option{
         نسيت الرقم السري
       </button>
     </div>
+    <!-- زر المطور - يُحذف لاحقاً -->
+    <button onclick="devLogin()"
+      style="margin-top:18px;width:100%;padding:10px;border-radius:10px;
+      background:rgba(124,58,237,.12);border:1.5px dashed rgba(124,58,237,.4);
+      color:#7c3aed;font-size:14px;font-weight:700;cursor:pointer;
+      display:flex;align-items:center;justify-content:center;gap:8px">
+      🛠 دخول المطور (مؤقت)
+    </button>
   </div>
 </div>
 
@@ -791,9 +802,9 @@ select.fi option{
 
   <!-- شريط الترقية للمجانيين -->
   <div id="upgrade-banner" style="display:none;background:linear-gradient(135deg,#1e3a8a,#2563eb);
-    padding:7px 16px;text-align:center;cursor:pointer" ondblclick="showUpgradeModal()">
-    <span style="font-size:13px;color:rgba(255,255,255,.75)">🔒 بياناتك محلية فقط — </span>
-    <span style="font-size:14px;font-weight:900;color:#fbbf24">ترقية الآن</span>
+    padding:5px 16px;text-align:center;cursor:pointer" ondblclick="showUpgradeModal()">
+    <span style="font-size:12px;color:rgba(255,255,255,.7)">🔒 بياناتك محلية — </span><span
+      style="font-size:15px;font-weight:900;color:#fbbf24;letter-spacing:.3px">ترقية الآن</span>
   </div>
 
   <!-- الشريط العلوي: شعار + اسم المتجر في المنتصف -->
@@ -814,15 +825,17 @@ select.fi option{
   </div>
   <!-- زر الإضافة السريعة العائم -->
   <button onclick="openQuickAdd()"
+    id="fab-btn"
+    onmousedown="this.style.transform='translateX(-50%) scale(.92)'"
+    onmouseup="this.style.transform='translateX(-50%) scale(1)'"
     style="position:fixed;bottom:72px;left:50%;transform:translateX(-50%);
     width:58px;height:58px;border-radius:50%;background:linear-gradient(135deg,#7c3aed,#a855f7);
-    border:none;color:#fff;font-size:28px;cursor:pointer;
-    box-shadow:0 4px 20px rgba(124,58,237,.5);z-index:50;
-    display:flex;align-items:center;justify-content:center;
-    transition:transform .15s" id="fab-btn"
-    onmousedown="this.style.transform='translateX(-50%) scale(.92)'"
-    onmouseup="this.style.transform='translateX(-50%) scale(1)'">
-    ⚡
+    border:none;cursor:pointer;box-shadow:0 4px 20px rgba(124,58,237,.5);z-index:50;
+    display:none;align-items:center;justify-content:center;transition:transform .15s">
+    <svg xmlns="http://www.w3.org/2000/svg" width="26" height="26" viewBox="0 0 24 24"
+      fill="none" stroke="white" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+    </svg>
   </button>
   <div class="botnav">
     <button class="bnt active" onclick="showTab('home')" id="tab-home">
@@ -1464,7 +1477,7 @@ select.fi option{
 <button id="aiFab" onclick="openAIChat()" aria-label="اسأل عن الدفتر"
   style="position:fixed;bottom:100px;left:24px;width:58px;height:58px;
   border-radius:50%;background:#1565c0;color:white;border:none;cursor:pointer;
-  display:flex;align-items:center;justify-content:center;
+  display:none;align-items:center;justify-content:center;
   box-shadow:0 3px 10px rgba(0,0,0,0.35);z-index:900;">
   <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24"
     fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">

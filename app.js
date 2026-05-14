@@ -1242,7 +1242,7 @@ async function init() {
 // تسجيل الدخول
 // ================================================================
 async function doLogin() {
-  const phone = document.getElementById('inp-phone').value.trim();
+  let phone = document.getElementById('inp-phone').value.trim();
   const pin   = document.getElementById('inp-pin').value.trim();
   const err   = document.getElementById('login-err');
   const btn   = document.getElementById('login-btn');
@@ -1250,19 +1250,37 @@ async function doLogin() {
   if (!phone) { showErr(err, 'أدخل رقم الهاتف'); return; }
   if (!pin)   { showErr(err, 'أدخل الرقم السري'); return; }
 
+  // تطبيع رقم الهاتف - نجرب الصيغتين
+  const phoneVariants = [];
+  if (phone.startsWith('+970')) {
+    phoneVariants.push(phone);                      // +9700599111222
+    phoneVariants.push('0' + phone.slice(4));        // 0599111222
+    phoneVariants.push(phone.slice(1));              // 9700599111222
+  } else if (phone.startsWith('0')) {
+    phoneVariants.push(phone);                      // 0599111222
+    phoneVariants.push('+970' + phone.slice(1));     // +970599111222
+  } else {
+    phoneVariants.push(phone);
+  }
+
   err.style.display = 'none';
   btn.textContent = 'جاري...';
   btn.disabled = true;
 
   try {
-    const res = await fetch(LOGIN_URL, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ action: 'login', phone, pin })
-    });
-    const d = await res.json();
-
-    if (d.error) { showErr(err, d.error); return; }
+    let d = null;
+    let lastError = '';
+    for (const ph of phoneVariants) {
+      const res = await fetch(LOGIN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'login', phone: ph, pin })
+      });
+      d = await res.json();
+      if (d.ok) { phone = ph; break; }
+      lastError = d.error || 'خطأ';
+    }
+    if (!d || !d.ok) { showErr(err, lastError); return; }
     if (d.ok) {
       SESSION = {
         merchant_id:     d.merchant_id,
@@ -1306,6 +1324,11 @@ async function doLogin() {
       updateSubscriptionUI();
       monitorConnection();
       setTimeout(doSync, 500);
+      // إظهار أزرار التطبيق بعد الدخول
+      const fabEl   = document.getElementById('fab-btn');
+      const aiFabEl = document.getElementById('aiFab');
+      if (fabEl)   fabEl.style.display   = 'flex';
+      if (aiFabEl) aiFabEl.style.display = 'flex';
     }
     if (d.need_setup) {
       showErr(err, 'يجب ضبط الرقم السري أولاً عبر المتصفح');
@@ -2865,6 +2888,16 @@ function showScreen(id) {
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
   document.getElementById(id).classList.add('active');
   if (id === 's-settings') showSettings();
+  // إخفاء أزرار التطبيق على شاشات الدخول
+  const loginScreens = ['s-login','s-register','s-forgot','s-terms','s-setup-shop'];
+  const isLogin = loginScreens.includes(id);
+  const fab   = document.getElementById('fab-btn');
+  const aiFab = document.getElementById('aiFab');
+  const topnav = document.querySelector('#s-home .topnav, .topnav:not(#s-settings .topnav)');
+  const banner = document.getElementById('upgrade-banner');
+  if (fab)    fab.style.display    = isLogin ? 'none' : 'flex';
+  if (aiFab)  aiFab.style.display  = isLogin ? 'none' : 'flex';
+  if (banner && isLogin) banner.style.display = 'none';
 }
 
 // ================================================================
@@ -2952,6 +2985,10 @@ async function devLogin() {
       await loadHomeData();
       updateSubscriptionUI();
       monitorConnection();
+      const fabEl   = document.getElementById('fab-btn');
+      const aiFabEl = document.getElementById('aiFab');
+      if (fabEl)   fabEl.style.display   = 'flex';
+      if (aiFabEl) aiFabEl.style.display = 'flex';
     } else {
       alert('فشل دخول المطور: ' + (d.error||'خطأ'));
     }
@@ -3015,20 +3052,26 @@ function renderRecentCusts(containerId, onSelect) {
 // الإضافة السريعة (FAB)
 // ================================================================
 async function openQuickAdd() {
-  await populateCustomerSelect();
-  document.getElementById('quick-cust-search').value = '';
-  document.getElementById('quick-cust-id').value = '';
-  document.getElementById('quick-amount').value = '';
-  document.getElementById('quick-err').style.display = 'none';
-  renderRecentCusts('quick-recent', (id, name) => {
-    document.getElementById('quick-cust-search').value = name;
-    document.getElementById('quick-cust-id').value = id;
-    document.getElementById('quick-cust-dropdown').style.display = 'none';
-    document.getElementById('quick-amount').focus();
-  });
-  renderAmountChips('quick-amount-chips', 'quick-amount');
-  openModal('m-quick-add');
-  setTimeout(() => document.getElementById('quick-cust-search').focus(), 300);
+  if (!SESSION) return; // لا تفتح قبل الدخول
+  try {
+    await populateCustomerSelect();
+    document.getElementById('quick-cust-search').value = '';
+    document.getElementById('quick-cust-id').value = '';
+    document.getElementById('quick-amount').value = '';
+    document.getElementById('quick-err').style.display = 'none';
+    renderRecentCusts('quick-recent', (id, name) => {
+      document.getElementById('quick-cust-search').value = name;
+      document.getElementById('quick-cust-id').value = id;
+      document.getElementById('quick-cust-dropdown').style.display = 'none';
+      document.getElementById('quick-amount').focus();
+    });
+    renderAmountChips('quick-amount-chips', 'quick-amount');
+    openModal('m-quick-add');
+    setTimeout(() => document.getElementById('quick-cust-search').focus(), 300);
+  } catch(e) {
+    console.error('openQuickAdd:', e);
+    openModal('m-quick-add'); // افتح المودال حتى لو فشل التحميل
+  }
 }
 
 function filterQuickSearch(q) {
@@ -3565,9 +3608,12 @@ let globalMicRec = null;
 let globalMicTarget = null;
 
 function initGlobalMic() {
-  // إضافة أيقونة مايك لكل input text/tel/search
+  // إضافة أيقونة مايك لكل input text/tel/search - ما عدا شاشات الدخول والتسجيل
+  const loginScreens = ['s-login','s-register','s-forgot','s-terms','s-setup-shop'];
   document.querySelectorAll('input[type="text"],input[type="tel"],input[type="search"],input[type="number"]').forEach(inp => {
     if (inp.dataset.micAdded) return;
+    // تخطّي مدخلات شاشات الدخول
+    if (loginScreens.some(id => inp.closest('#' + id))) return;
     inp.dataset.micAdded = '1';
     const wrap = inp.parentElement;
     const pos = window.getComputedStyle(wrap).position;
