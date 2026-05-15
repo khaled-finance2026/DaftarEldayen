@@ -2885,15 +2885,31 @@ async function showSettings() {
 // مساعدات
 // ================================================================
 function showScreen(id) {
+  const SCREEN_NAMES = {
+    's-login':      'دخول | v12',
+    's-register':   'تسجيل | v12',
+    's-terms':      'اتفاقية | v12',
+    's-setup-shop': 'إعداد المتجر | v12',
+    's-home':       'الرئيسية | v12',
+    's-customers':  'العملاء | v12',
+    's-add':        'إضافة | v12',
+    's-reports':    'تقارير | v12',
+    's-stmt':       'كشف حساب | v12',
+    's-settings':   'إعدادات | v12',
+    's-forgot':     'نسيت كلمة المرور | v12'
+  };
   document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
+  const scr = document.getElementById(id);
+  scr.classList.add('active');
+  // شارة المطور — تُحذف لاحقاً
+  let badge = scr.querySelector('.dev-badge');
+  if (!badge) { badge = document.createElement('div'); badge.className = 'dev-badge'; scr.appendChild(badge); }
+  badge.textContent = SCREEN_NAMES[id] || id + ' | v12';
   if (id === 's-settings') showSettings();
-  // إخفاء أزرار التطبيق على شاشات الدخول
   const loginScreens = ['s-login','s-register','s-forgot','s-terms','s-setup-shop'];
   const isLogin = loginScreens.includes(id);
   const fab   = document.getElementById('fab-btn');
   const aiFab = document.getElementById('aiFab');
-  const topnav = document.querySelector('#s-home .topnav, .topnav:not(#s-settings .topnav)');
   const banner = document.getElementById('upgrade-banner');
   if (fab)    fab.style.display    = isLogin ? 'none' : 'flex';
   if (aiFab)  aiFab.style.display  = isLogin ? 'none' : 'flex';
