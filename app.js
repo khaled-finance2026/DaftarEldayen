@@ -1951,7 +1951,6 @@ async function renderCustomers(filter='') {
   if (filter) custs = custs.filter(c =>
     c.name.includes(filter) || (c.phone||'').includes(filter));
 
-  // حساب بيانات كل زبون للفرز
   const custData = custs.map(c => {
     const txs = allTx.filter(t => t.customer_id === c.id && !t.is_partial_payment);
     const unpaidTxs = txs.filter(t => t.status === 'غير مدفوع');
@@ -1972,7 +1971,6 @@ async function renderCustomers(filter='') {
     return { c, debt, hasPartial, oldestDebt, newestDebt, isPaid: debt <= 0 };
   });
 
-  // الفرز حسب الوضع المختار
   custData.sort((a, b) => {
     switch(custSortMode) {
       case 'debt':    return b.debt - a.debt;
@@ -1982,18 +1980,18 @@ async function renderCustomers(filter='') {
         if (!a.hasPartial && b.hasPartial) return 1;
         return b.debt - a.debt;
       }
-      case 'oldest':  {
+      case 'oldest': {
         if (!a.oldestDebt && b.oldestDebt) return 1;
         if (a.oldestDebt && !b.oldestDebt) return -1;
         return (a.oldestDebt||'') < (b.oldestDebt||'') ? -1 : 1;
       }
-      case 'newest':  {
+      case 'newest': {
         if (!a.newestDebt && b.newestDebt) return 1;
         if (a.newestDebt && !b.newestDebt) return -1;
         return (a.newestDebt||'') > (b.newestDebt||'') ? -1 : 1;
       }
-      case 'paid':    return (a.isPaid?0:1) - (b.isPaid?0:1);
-      default:        return b.debt - a.debt;
+      case 'paid':   return (a.isPaid?0:1) - (b.isPaid?0:1);
+      default:       return b.debt - a.debt;
     }
   });
 
@@ -2012,28 +2010,32 @@ async function renderCustomers(filter='') {
     return;
   }
 
-document.getElementById('cust-list').innerHTML = custData.map(({c, debt, hasPartial, isPaid}, idx) => {      <div class="li-avatar">${c.name[0]}</div>
-      <div class="li-info">
-        <div class="li-avatar" style="position:relative">
-        ${c.name[0]}
-        <span style="position:absolute;top:-4px;right:-4px;background:#1e3a8a;
-          color:#fff;font-size:10px;font-weight:700;border-radius:50%;
-          width:16px;height:16px;display:flex;align-items:center;
-          justify-content:center;line-height:1">${idx+1}</span>
-      </div>
-        <div class="li-phone">${c.phone||''}</div>
-      </div>
-      <div class="li-right">
-        <div class="li-amt" style="color:${debt>0?'var(--red)':'var(--grn)'}">
-          ${debt.toFixed(2)} ${CUR}
-        </div>
-        ${debt>0
+  let rank = 0;
+  document.getElementById('cust-list').innerHTML = custData.map(({c, debt, hasPartial, isPaid}) => {
+    rank++;
+    return '<div class="list-item" onclick="openStmt(\'' + c.id + '\')">' +
+      '<div class="li-avatar" style="position:relative">' +
+        c.name[0] +
+        '<span style="position:absolute;top:-4px;right:-4px;background:#1e3a8a;' +
+        'color:#fff;font-size:10px;font-weight:700;border-radius:50%;' +
+        'width:16px;height:16px;display:flex;align-items:center;' +
+        'justify-content:center">' + rank + '</span>' +
+      '</div>' +
+      '<div class="li-info">' +
+        '<div class="li-name">' + c.name + '</div>' +
+        '<div class="li-phone">' + (c.phone||'') + '</div>' +
+      '</div>' +
+      '<div class="li-right">' +
+        '<div class="li-amt" style="color:' + (debt>0?'var(--red)':'var(--grn)') + '">' +
+          debt.toFixed(2) + ' ' + CUR +
+        '</div>' +
+        (debt>0
           ? hasPartial
             ? '<span class="li-status s-partial">جزئي</span>'
             : '<span class="li-status s-unpaid">مديون</span>'
-          : '<span class="li-status s-paid">مسدَّد ✓</span>'}
-      </div>
-    </div>`;
+          : '<span class="li-status s-paid">مسدَّد ✓</span>') +
+      '</div>' +
+    '</div>';
   }).join('');
 }
 
