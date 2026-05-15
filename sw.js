@@ -1,4 +1,4 @@
-const V = 'dd-v6';
+const V = 'dd-v7';
 const APP_SHELL = [
   '/DaftarEldayen/',
   '/DaftarEldayen/index.html',
@@ -22,6 +22,9 @@ self.addEventListener('activate', e => {
         keys.filter(k => k !== V).map(k => caches.delete(k))
       ))
       .then(() => self.clients.claim())
+      // بعد التفعيل مباشرة: أخبر كل الصفحات المفتوحة بإعادة التحميل
+      .then(() => self.clients.matchAll({ type: 'window' }))
+      .then(clients => clients.forEach(client => client.postMessage('RELOAD')))
   );
 });
 
@@ -31,23 +34,21 @@ self.addEventListener('fetch', e => {
 
   if (url.hostname === 'khaled-finance2026.github.io') {
     e.respondWith(
-      caches.match(e.request).then(async cached => {
-        if (cached) {
-          fetch(e.request).then(r => {
-            if (r.ok) caches.open(V).then(c => c.put(e.request, r.clone()));
-          }).catch(() => {});
-          return cached;
-        }
-        try {
-          const r = await fetch(e.request);
-          const rClone = r.clone();
-          if (r.ok) caches.open(V).then(c => c.put(e.request, rClone));
+      // الشبكة أولاً دائماً
+      fetch(e.request)
+        .then(r => {
+          if (r.ok) {
+            // احفظ في الكاش للاستخدام أوفلاين
+            caches.open(V).then(c => c.put(e.request, r.clone()));
+          }
           return r;
-        } catch {
-          const fallback = await caches.match('/DaftarEldayen/index.html');
-          return fallback || new Response('لا يوجد اتصال', {status: 503});
-        }
-      })
+        })
+        .catch(() =>
+          // لا انترنت: استخدم الكاش
+          caches.match(e.request)
+            .then(cached => cached || caches.match('/DaftarEldayen/index.html'))
+            .then(cached => cached || new Response('لا يوجد اتصال', { status: 503 }))
+        )
     );
     return;
   }

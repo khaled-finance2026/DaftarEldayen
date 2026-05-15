@@ -3197,6 +3197,10 @@ function addLongPressToDebt(el, txId, rem, custId, desc) {
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.register('/DaftarEldayen/sw.js', {scope:'/DaftarEldayen/'})
     .then(reg => {
+      // استقبال أمر إعادة التحميل عند تفعيل نسخة جديدة
+      navigator.serviceWorker.addEventListener('message', e => {
+        if (e.data === 'RELOAD') window.location.reload();
+      });
       if (reg.waiting) reg.waiting.postMessage('SKIP_WAITING');
       reg.addEventListener('updatefound', () => {
         const sw = reg.installing;
