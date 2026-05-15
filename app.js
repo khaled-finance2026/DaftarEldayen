@@ -2012,11 +2012,15 @@ async function renderCustomers(filter='') {
     return;
   }
 
-  document.getElementById('cust-list').innerHTML = custData.map(({c, debt, hasPartial, isPaid}) => {
-    return `<div class="list-item" onclick="openStmt('${c.id}')">
-      <div class="li-avatar">${c.name[0]}</div>
+document.getElementById('cust-list').innerHTML = custData.map(({c, debt, hasPartial, isPaid}, idx) => {      <div class="li-avatar">${c.name[0]}</div>
       <div class="li-info">
-        <div class="li-name">${c.name}</div>
+        <div class="li-avatar" style="position:relative">
+        ${c.name[0]}
+        <span style="position:absolute;top:-4px;right:-4px;background:#1e3a8a;
+          color:#fff;font-size:10px;font-weight:700;border-radius:50%;
+          width:16px;height:16px;display:flex;align-items:center;
+          justify-content:center;line-height:1">${idx+1}</span>
+      </div>
         <div class="li-phone">${c.phone||''}</div>
       </div>
       <div class="li-right">
